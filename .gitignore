@@ -1,32 +1,41 @@
-# Prerequisites
-*.d
+# Ignore vscode
+*.vscode*
+
+# Ignore vim undo file
+*.un~
 
 # Compiled Object files
 *.slo
 *.lo
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
-*.lib
 
-# Executables
-*.exe
-*.out
-*.app
+# Ignore graph dataset files
+*.graph
+*.mtx*
+
+# Ignore tarball
+*.tar.gz
+
+# Ignore bin directory
+bin/
+
+# Ignore eval directory
+eval/
+
+# Ignore vim temp files
+*.sw~
+
+# Ignore build directory
+build
+
+# Ignore external fetched content
+externals/*
