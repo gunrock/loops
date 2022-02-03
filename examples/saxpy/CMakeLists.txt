@@ -12,7 +12,8 @@ set(SOURCE_LIST
 target_sources(${APPLICATION_NAME} PRIVATE ${SOURCE_LIST})
 target_link_libraries(${APPLICATION_NAME} 
     PRIVATE loops
-    PRIVATE nvToolsExt)
+    # PRIVATE nvToolsExt
+)
 get_target_property(LOOPS_ARCHITECTURES loops CUDA_ARCHITECTURES)
 set_target_properties(${APPLICATION_NAME} 
     PROPERTIES 
