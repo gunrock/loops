@@ -131,6 +131,7 @@ target_link_libraries(loops
 ####################################################
 target_sources(loops
   INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/util/gitsha1make.c"
+  INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/container/detail/mmio.cpp"
 )
 
 ####################################################

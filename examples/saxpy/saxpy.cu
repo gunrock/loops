@@ -9,16 +9,18 @@
  * @copyright Copyright (c) 2022
  *
  */
-#include <thrust/device_vector.h>
+#include <loops/container/vector.hxx>
 #include <loops/grid_stride_range.hxx>
 #include <loops/util/generate.hxx>
+
+#include <thrust/copy.h>
 
 template <typename type_t>
 __global__ void saxpy(int n, type_t a, type_t* x, type_t* y) {
   /// Equivalent to:
   /// i = blockIdx.x * blockDim.x + threadIdx.x; (init)
   /// i < n; (boundary condition)
-  /// i+= gridDim.x * blockDim.x. (step)
+  /// i += gridDim.x * blockDim.x. (step)
   for (auto i : loops::grid_stride_range(0, n)) {
     y[i] += a * x[i];
   }
@@ -30,8 +32,8 @@ int main() {
   constexpr type_t alpha = 2.0f;
 
   // Create thrust device vectors.
-  thrust::device_vector<type_t> x(N);
-  thrust::device_vector<type_t> y(N);
+  loops::vector_t<type_t> x(N);
+  loops::vector_t<type_t> y(N);
 
   // Generate random numbers between [0, 1].
   loops::generate::random::uniform_distribution(x.begin(), x.end());
