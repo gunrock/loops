@@ -11,7 +11,8 @@
 
 #pragma once
 
-#include <loops/grid_stride_range.hxx>
+#include <loops/schedule.hxx>
+
 #include <loops/util/generate.hxx>
 #include <loops/container/formats.hxx>
 #include <loops/container/vector.hxx>

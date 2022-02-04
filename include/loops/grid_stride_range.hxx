@@ -26,7 +26,7 @@ using step_range_t = typename range_proxy<T>::step_range_proxy;
  * @return range_proxy<T>::step_range_proxy range returned.
  */
 template <typename T>
-__device__ step_range_t<T> grid_stride_range(T begin, T end) {
+__device__ __forceinline__ step_range_t<T> grid_stride_range(T begin, T end) {
   begin += blockDim.x * blockIdx.x + threadIdx.x;
   return range(begin, end).step(gridDim.x * blockDim.x);
 }
