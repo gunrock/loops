@@ -196,7 +196,7 @@ option(LOOPS_BUILD_TESTS
 # Subdirectories for examples, testing and documentation
 if(LOOPS_BUILD_TESTS)
   include(${PROJECT_SOURCE_DIR}/cmake/FetchGoogleTest.cmake)
-  add_subdirectory(unittests)
+  # add_subdirectory(unittests)
 endif(LOOPS_BUILD_TESTS)
 
 ####################################################
