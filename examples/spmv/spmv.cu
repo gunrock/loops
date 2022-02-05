@@ -91,12 +91,12 @@ __global__ void tiled_spmv(setup_t config,
   auto partition = cooperative_groups::tiled_partition<32>(thread_block);
   auto thread_id = threadIdx.x + blockIdx.x * blockDim.x;
   auto local_id = partition.thread_rank();
-  auto length = rows;
+  std::size_t length = thread_id - local_id + partition.size();
 
   length -= thread_id - local_id;
 
   for (auto virtual_atom : config.virtual_atoms(storage, partition)) {
-    auto row = config.tile_id(storage, virtual_atom);
+    auto row = config.tile_id(storage, virtual_atom, length);
     if (row >= length)
       continue;
 
