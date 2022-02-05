@@ -44,6 +44,8 @@ class tile_traits;
  * @tparam atom_size_t
  */
 template <algroithms_t scheme,
+          std::size_t threads_per_block,
+          std::size_t threads_per_tile,
           typename tiles_t,
           typename atoms_t,
           typename tile_size_t = std::size_t,

@@ -161,9 +161,9 @@ set(CUDA_FLAGS
   --ptxas-options -v
   --generate-line-info
   $<$<CXX_COMPILER_ID:GNU>:-O3> # Host optimize-level
-  --verbose
-  --debug # Host debug
-  --device-debug # Device debug
+  # --verbose
+  # --debug # Host debug
+  # --device-debug # Device debug
 )
 
 ####################################################
