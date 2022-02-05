@@ -64,6 +64,8 @@ template <typename tiles_type,
           typename tile_size_type,
           typename atom_size_type>
 class setup<algroithms_t::thread_mapped,
+            1,
+            1,
             tiles_type,
             atoms_type,
             tile_size_type,
