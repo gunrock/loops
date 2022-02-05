@@ -131,8 +131,11 @@ class setup<algroithms_t::block_mapped,
   template <typename cg_block_tile_t>
   __device__ atoms_t work_per_partition(tile_size_t tile_id,
                                         cg_block_tile_t& partition) {
-    atoms_t atoms_to_process =
-        tile_traits_t::begin()[tile_id + 1] - tile_traits_t::begin()[tile_id];
+    atoms_t atoms_to_process = 0;
+    if (tile_id < tile_traits_t::size()) {
+      atoms_to_process =
+          tile_traits_t::begin()[tile_id + 1] - tile_traits_t::begin()[tile_id];
+    }
     return cooperative_groups::exclusive_scan(partition, atoms_to_process);
   }
 
@@ -151,8 +154,10 @@ class setup<algroithms_t::block_mapped,
                              balance(st, partition));
   }
 
-  __device__ tiles_t tile_id(storage_t* st, atoms_t& virtual_atom) {
-    return rightmost(st, virtual_atom, atom_traits_t::size());
+  __device__ tiles_t tile_id(storage_t* st,
+                             atoms_t& virtual_atom,
+                             tile_size_t& valid_search_size) {
+    return rightmost(st, virtual_atom, valid_search_size);
   }
 
   __device__ atoms_t atom_id(storage_t* st, atoms_t& v_atom, tiles_t& tid) {
