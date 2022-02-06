@@ -30,4 +30,16 @@ __device__ __forceinline__ step_range_t<T> grid_stride_range(T begin, T end) {
   begin += blockDim.x * blockIdx.x + threadIdx.x;
   return range(begin, end).step(gridDim.x * blockDim.x);
 }
+
+template <typename T>
+__device__ __forceinline__ step_range_t<T> block_stride_range(T begin, T end) {
+  return range(begin, end).step(blockDim.x);
+}
+
+template <typename T>
+__device__ __forceinline__ step_range_t<T> custom_stride_range(T begin,
+                                                               T end,
+                                                               T stride) {
+  return range(begin, end).step(stride);
+}
 }  // namespace loops

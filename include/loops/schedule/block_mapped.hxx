@@ -14,6 +14,8 @@
 #include <loops/grid_stride_range.hxx>
 #include <loops/schedule.hxx>
 
+#define _CG_ABI_EXPERIMENTAL
+
 #include <cooperative_groups.h>
 #include <cooperative_groups/scan.h>
 
@@ -162,9 +164,8 @@ class setup<algroithms_t::block_mapped,
                                                  cg_block_tile_t& partition) {
     storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
     atoms_t aggregate_atoms = balance(p_st, partition);
-    if (partition.thread_rank() == 0)
-      printf("aggregate_atoms: %d\n", (int)aggregate_atoms);
-    return grid_stride_range(atoms_t(partition.thread_rank()), aggregate_atoms);
+    return custom_stride_range(atoms_t(partition.thread_rank()),
+                               aggregate_atoms, atoms_t(THREADS_PER_TILE));
   }
 
   template <typename cg_block_tile_t>
@@ -203,16 +204,16 @@ class setup<algroithms_t::block_mapped,
       length = tile_traits_t::size();
 
     length -= thread_id - local_id;
-    return !(tile_traits_t::size() >= length);
+    return !(tile_id >= length);
   }
 
   template <typename cg_block_tile_t>
   __device__ atoms_t atom_id(storage_t* st,
                              atoms_t& v_atom,
-                             tiles_t& tid,
+                             tiles_t& tile_id,
                              cg_block_tile_t& partition) {
     storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
-    return tile_traits_t::begin()[tid] + v_atom - p_st[tid];
+    return tile_traits_t::begin()[tile_id] + v_atom - p_st[tile_id];
   }
 };
 
