@@ -75,15 +75,16 @@ template <typename setup_t,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void tiled_spmv(setup_t config,
-                           const std::size_t rows,
-                           const std::size_t cols,
-                           const std::size_t nnz,
-                           const offset_t* offsets,
-                           const index_t* indices,
-                           const type_t* values,
-                           const type_t* x,
-                           type_t* y) {
+__global__ void __launch_bounds__(setup_t::threads_per_block, 2)
+    tiled_spmv(setup_t config,
+               const std::size_t rows,
+               const std::size_t cols,
+               const std::size_t nnz,
+               const offset_t* offsets,
+               const index_t* indices,
+               const type_t* values,
+               const type_t* x,
+               type_t* y) {
   using storage_t = typename setup_t::storage_t;
   __shared__ storage_t storage[setup_t::threads_per_block];
 
@@ -93,7 +94,7 @@ __global__ void tiled_spmv(setup_t config,
 
   for (auto virtual_atom : config.virtual_atoms(storage, p)) {
     auto row = config.tile_id(storage, virtual_atom, p);
-    if (config.is_valid_tile(row, p))
+    if (!(config.is_valid_tile(row, p)))
       continue;
 
     auto nz = config.atom_id(storage, virtual_atom, row, p);
