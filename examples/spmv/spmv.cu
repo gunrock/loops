@@ -11,6 +11,8 @@
 
 #include "spmv.hxx"
 
+// #define DEBUG 1
+
 // template <typename index_t, typename offset_t, typename type_t>
 // __global__ void spmv(const std::size_t rows,
 //                      const std::size_t cols,
@@ -75,18 +77,26 @@ template <typename setup_t,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void __launch_bounds__(setup_t::threads_per_block, 2)
-    tiled_spmv(setup_t config,
-               const std::size_t rows,
-               const std::size_t cols,
-               const std::size_t nnz,
-               const offset_t* offsets,
-               const index_t* indices,
-               const type_t* values,
-               const type_t* x,
-               type_t* y) {
+__global__ void /* __launch_bounds__(setup_t::threads_per_block, 2) */
+tiled_spmv(setup_t config,
+           const std::size_t rows,
+           const std::size_t cols,
+           const std::size_t nnz,
+           const offset_t* offsets,
+           const index_t* indices,
+           const type_t* values,
+           const type_t* x,
+           type_t* y) {
   using storage_t = typename setup_t::storage_t;
+  using tile_storage_t = typename setup_t::tile_storage_t;
+
   __shared__ storage_t storage[setup_t::threads_per_block];
+  __shared__ tile_storage_t tile_id_storage[setup_t::threads_per_block];
+
+  auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx < rows) {
+    tile_id_storage[threadIdx.x] = idx;
+  }
 
   auto g = cooperative_groups::this_grid();
   auto b = cooperative_groups::this_thread_block();
@@ -94,11 +104,18 @@ __global__ void __launch_bounds__(setup_t::threads_per_block, 2)
 
   for (auto virtual_atom : config.virtual_atoms(storage, p)) {
     auto row = config.tile_id(storage, virtual_atom, p);
-    if (!(config.is_valid_tile(row, p)))
+    typename setup_t::tiles_t r = tile_id_storage[row];
+    if (!(config.is_valid_tile(r, p)))
       continue;
 
-    auto nz = config.atom_id(storage, virtual_atom, row, p);
-    atomicAdd(&y[row], values[nz] * x[indices[nz]]);
+    auto nz = config.atom_id(storage, virtual_atom, r, p);
+
+    atomicAdd(&y[r], values[nz] * x[indices[nz]]);
+
+#ifdef DEBUG
+    printf("y[%d] @ [%d] = %f * %f @ %d\n",  // <---
+           r, nz, values[nz], x[indices[nz]], indices[nz]);
+#endif
   }
 }
 
@@ -143,27 +160,17 @@ int main(int argc, char** argv) {
 
   if (parameters.validate) {
     auto h_y = cpu::spmv(csr, x);
-    vector_t<type_t, memory::memory_space_t::device> d_y(y);
-    bool success = std::equal(h_y.begin(), h_y.end(), d_y.begin());
+
+    std::size_t errors = util::equal(
+        y.data().get(), h_y.data(), csr.rows,
+        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-4; },
+        parameters.verbose);
 
     std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
               << std::endl;
     std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
               << csr.nnzs << ")" << std::endl;
-    std::cout << "Validation:\t" << (success ? "passed" : "failed")
+    std::cout << "Validation:\t" << ((errors == 0) ? "passed" : "failed")
               << std::endl;
-
-    if (parameters.verbose) {
-      std::cout << "y:\t\t";
-      thrust::copy(y.begin(), (y.size() < 10) ? y.end() : y.begin() + 10,
-                   std::ostream_iterator<type_t>(std::cout, " "));
-      std::cout << std::endl;
-
-      std::cout << "h_y:\t\t";
-      thrust::copy(h_y.begin(),
-                   (h_y.size() < 10) ? h_y.end() : h_y.begin() + 10,
-                   std::ostream_iterator<type_t>(std::cout, " "));
-      std::cout << std::endl;
-    }
   }
 }

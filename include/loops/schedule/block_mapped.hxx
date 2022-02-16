@@ -110,6 +110,7 @@ class setup<algroithms_t::block_mapped,
   using atom_size_t = atom_size_type;
 
   using storage_t = atoms_t;
+  using tile_storage_t = tiles_t;
 
   using tile_traits_t =
       tile_traits<algroithms_t::block_mapped, tiles_type, tile_size_type>;
@@ -141,31 +142,21 @@ class setup<algroithms_t::block_mapped,
       : tile_traits_t(num_tiles, tiles), atom_traits_t(num_atoms) {}
 
   template <typename cg_block_tile_t>
-  __device__ atoms_t work_per_partition(tile_size_t tile_id,
-                                        cg_block_tile_t& partition) {
+  __device__ step_range_t<atoms_t> virtual_atoms(storage_t* st,
+                                                 cg_block_tile_t& partition) {
+    storage_t* p_st = st + (partition.meta_group_rank() * partition.size());
+    auto tile_id = threadIdx.x + blockIdx.x * blockDim.x;
     atoms_t atoms_to_process = 0;
     if (tile_id < tile_traits_t::size()) {
       atoms_to_process =
           tile_traits_t::begin()[tile_id + 1] - tile_traits_t::begin()[tile_id];
     }
-    return cooperative_groups::exclusive_scan(partition, atoms_to_process);
-  }
-
-  template <typename cg_block_tile_t>
-  __device__ atoms_t balance(storage_t* st, cg_block_tile_t& partition) {
-    auto tile_id = threadIdx.x + blockIdx.x * blockDim.x;
-    st[partition.thread_rank()] = work_per_partition(tile_id, partition);
+    p_st[partition.thread_rank()] =
+        cooperative_groups::exclusive_scan(partition, atoms_to_process);
     partition.sync();
-    return st[partition.size() - 1];
-  }
-
-  template <typename cg_block_tile_t>
-  __device__ step_range_t<atoms_t> virtual_atoms(storage_t* st,
-                                                 cg_block_tile_t& partition) {
-    storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
-    atoms_t aggregate_atoms = balance(p_st, partition);
+    atoms_t aggregate_atoms = p_st[partition.size() - 1];
     return custom_stride_range(atoms_t(partition.thread_rank()),
-                               aggregate_atoms, atoms_t(THREADS_PER_TILE));
+                               aggregate_atoms, atoms_t(partition.size()));
   }
 
   template <typename cg_block_tile_t>
@@ -179,12 +170,14 @@ class setup<algroithms_t::block_mapped,
     auto block_id = b.thread_rank();
     auto local_id = partition.thread_rank();
 
-    tile_size_t length = thread_id - local_id + partition.size();
+    int length = thread_id - local_id + partition.size();
     if (tile_traits_t::size() < length)
       length = tile_traits_t::size();
 
     length -= thread_id - local_id;
 
+    // printf("length: %d, %d, %d\n", (int)length, (int)thread_id,
+    // (int)local_id);
     storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
     return rightmost(p_st, virtual_atom, length);
   }
@@ -195,11 +188,11 @@ class setup<algroithms_t::block_mapped,
     auto g = cooperative_groups::this_grid();
     auto b = cooperative_groups::this_thread_block();
 
-    auto thread_id = g.thread_rank();
+    auto thread_id = threadIdx.x + blockIdx.x * blockDim.x;
     auto block_id = b.thread_rank();
     auto local_id = partition.thread_rank();
 
-    tile_size_t length = thread_id - local_id + partition.size();
+    int length = thread_id - local_id + partition.size();
     if (tile_traits_t::size() < length)
       length = tile_traits_t::size();
 
