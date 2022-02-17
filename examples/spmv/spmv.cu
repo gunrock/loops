@@ -77,39 +77,62 @@ template <typename setup_t,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void /* __launch_bounds__(setup_t::threads_per_block, 2) */
-tiled_spmv(setup_t config,
-           const std::size_t rows,
-           const std::size_t cols,
-           const std::size_t nnz,
-           const offset_t* offsets,
-           const index_t* indices,
-           const type_t* values,
-           const type_t* x,
-           type_t* y) {
+__global__ void __launch_bounds__(setup_t::threads_per_block, 2)
+    tiled_spmv(setup_t config,
+               const std::size_t rows,
+               const std::size_t cols,
+               const std::size_t nnz,
+               const offset_t* offsets,
+               const index_t* indices,
+               const type_t* values,
+               const type_t* x,
+               type_t* y) {
   using storage_t = typename setup_t::storage_t;
   using tile_storage_t = typename setup_t::tile_storage_t;
 
+  // reserve shared memory for thread_block_tile usage.
+  __shared__ cooperative_groups::experimental::block_tile_memory<
+      4, setup_t::threads_per_block>
+      groups_space;
+
   __shared__ storage_t storage[setup_t::threads_per_block];
   __shared__ tile_storage_t tile_id_storage[setup_t::threads_per_block];
+  storage_t thread_offsets[1];
+
+#ifdef DEBUG
+  if (threadIdx.x == 0) {
+    printf("block id = %d\n", blockIdx.x);
+  }
+#endif
 
   auto idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx < rows) {
+#ifdef DEBUG
+    printf("idx, rows : (%d, %d)\n", (int)idx, (int)rows);
+#endif
     tile_id_storage[threadIdx.x] = idx;
+    thread_offsets[0] = offsets[idx + 1] - offsets[idx];
+  } else {
+    tile_id_storage[threadIdx.x] = -1;
+    thread_offsets[0] = 0;
   }
 
   auto g = cooperative_groups::this_grid();
-  auto b = cooperative_groups::this_thread_block();
-  auto p = cooperative_groups::tiled_partition<setup_t::threads_per_tile>(b);
+  auto b = cooperative_groups::experimental::this_thread_block(groups_space);
+  auto p = cooperative_groups::experimental::tiled_partition<
+      setup_t::threads_per_tile>(b);
 
-  for (auto virtual_atom : config.virtual_atoms(storage, p)) {
+  for (auto virtual_atom : config.virtual_atoms(storage, thread_offsets, p)) {
     auto row = config.tile_id(storage, virtual_atom, p);
-    typename setup_t::tiles_t r = tile_id_storage[row];
-    if (!(config.is_valid_tile(r, p)))
+
+    if (!(config.is_valid_tile(row, p)))
       continue;
 
-    auto nz = config.atom_id(storage, virtual_atom, r, p);
+    typename setup_t::tiles_t r = tile_id_storage[row];
+    if (r == -1)
+      continue;
 
+    auto nz = config.atom_id(storage, virtual_atom, r, row, p);
     atomicAdd(&y[r], values[nz] * x[indices[nz]]);
 
 #ifdef DEBUG
@@ -139,8 +162,8 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end());
 
   // Create a schedule.
-  constexpr std::size_t block_size = 32;
-  constexpr std::size_t tile_size = 32;
+  constexpr std::size_t block_size = 128;
+  constexpr std::size_t tile_size = 64;
   using setup_t = schedule::setup<schedule::algroithms_t::block_mapped,
                                   block_size, tile_size, index_t, offset_t>;
 
@@ -150,8 +173,15 @@ int main(int argc, char** argv) {
   std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
+
+  // launch::non_cooperative(
+  //     stream, tiled_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
+  //     block_size, config, csr.rows, csr.cols, csr.nnzs,
+  //     csr.offsets.data().get(), csr.indices.data().get(),
+  //     csr.values.data().get(), x.data().get(), y.data().get());
+
   launch::cooperative(stream, tiled_spmv<setup_t, index_t, offset_t, type_t>,
-                      block_size, grid_size, config, csr.rows, csr.cols,
+                      grid_size, block_size, config, csr.rows, csr.cols,
                       csr.nnzs, csr.offsets.data().get(),
                       csr.indices.data().get(), csr.values.data().get(),
                       x.data().get(), y.data().get());
