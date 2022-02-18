@@ -129,6 +129,7 @@ class setup<algroithms_t::block_mapped,
   template <typename cg_block_tile_t>
   __device__ step_range_t<atoms_t> virtual_atoms(storage_t* st,
                                                  storage_t* th_st,
+                                                 storage_t* sh_aggregates,
                                                  cg_block_tile_t& partition) {
     storage_t* p_st = st + (partition.meta_group_rank() * partition.size());
     // auto tile_id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -146,7 +147,17 @@ class setup<algroithms_t::block_mapped,
     // printf("threadIdx.x = %d, nnzs = %d, p_st[%d] : offset = %d\n",
     //        (int)threadIdx.x, (int)atom_to_process,
     //        (int)partition.thread_rank(), (int)p_st[partition.thread_rank()]);
-    atoms_t aggregate_atoms = p_st[partition.size() - 1];
+    if (partition.thread_rank() == partition.size() - 1) {
+      // printf(
+      //     "Last Thread of Every Partition = %d, th_st[0] = %d, p_st[] =
+      //     %d\n", (int)partition.thread_rank(), (int)th_st[0],
+      //     (int)p_st[partition.thread_rank()]);
+      // Accumulate tiled aggregates.
+      sh_aggregates[partition.meta_group_rank()] =
+          p_st[partition.thread_rank()] + th_st[0];
+    }
+    partition.sync();
+    atoms_t aggregate_atoms = sh_aggregates[partition.meta_group_rank()];
     return custom_stride_range(atoms_t(partition.thread_rank()),
                                aggregate_atoms, atoms_t(partition.size()));
   }

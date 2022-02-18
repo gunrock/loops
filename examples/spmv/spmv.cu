@@ -95,6 +95,8 @@ __global__ void __launch_bounds__(setup_t::threads_per_block, 2)
       4, setup_t::threads_per_block>
       groups_space;
 
+  __shared__ storage_t
+      tile_aggregates[setup_t::threads_per_block / setup_t::threads_per_tile];
   __shared__ storage_t storage[setup_t::threads_per_block];
   __shared__ tile_storage_t tile_id_storage[setup_t::threads_per_block];
   storage_t thread_offsets[1];
@@ -122,7 +124,8 @@ __global__ void __launch_bounds__(setup_t::threads_per_block, 2)
   auto p = cooperative_groups::experimental::tiled_partition<
       setup_t::threads_per_tile>(b);
 
-  for (auto virtual_atom : config.virtual_atoms(storage, thread_offsets, p)) {
+  for (auto virtual_atom :
+       config.virtual_atoms(storage, thread_offsets, tile_aggregates, p)) {
     auto row = config.tile_id(storage, virtual_atom, p);
 
     if (!(config.is_valid_tile(row, p)))
@@ -162,8 +165,8 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end());
 
   // Create a schedule.
-  constexpr std::size_t block_size = 128;
-  constexpr std::size_t tile_size = 64;
+  constexpr std::size_t block_size = 32;
+  constexpr std::size_t tile_size = 32;
   using setup_t = schedule::setup<schedule::algroithms_t::block_mapped,
                                   block_size, tile_size, index_t, offset_t>;
 
@@ -200,7 +203,6 @@ int main(int argc, char** argv) {
               << std::endl;
     std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
               << csr.nnzs << ")" << std::endl;
-    std::cout << "Validation:\t" << ((errors == 0) ? "passed" : "failed")
-              << std::endl;
+    std::cout << "Errors:\t\t" << errors << std::endl;
   }
 }
