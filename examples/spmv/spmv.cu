@@ -9,9 +9,10 @@
  *
  */
 
-#include "spmv.hxx"
-
 // #define DEBUG 1
+// #define DEBUG_SCHEDULE 1
+
+#include "spmv.hxx"
 
 // template <typename index_t, typename offset_t, typename type_t>
 // __global__ void spmv(const std::size_t rows,
@@ -77,16 +78,16 @@ template <typename setup_t,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void __launch_bounds__(setup_t::threads_per_block, 2)
-    tiled_spmv(setup_t config,
-               const std::size_t rows,
-               const std::size_t cols,
-               const std::size_t nnz,
-               const offset_t* offsets,
-               const index_t* indices,
-               const type_t* values,
-               const type_t* x,
-               type_t* y) {
+__global__ void /* __launch_bounds__(setup_t::threads_per_block, 2) */
+tiled_spmv(setup_t config,
+           const std::size_t rows,
+           const std::size_t cols,
+           const std::size_t nnz,
+           const offset_t* offsets,
+           const index_t* indices,
+           const type_t* values,
+           const type_t* x,
+           type_t* y) {
   using storage_t = typename setup_t::storage_t;
   using tile_storage_t = typename setup_t::tile_storage_t;
 
@@ -162,7 +163,7 @@ int main(int argc, char** argv) {
   vector_t<type_t> y(csr.rows);
 
   // Generate random numbers between [0, 1].
-  generate::random::uniform_distribution(x.begin(), x.end());
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
   // Create a schedule.
   constexpr std::size_t block_size = 32;
@@ -177,17 +178,17 @@ int main(int argc, char** argv) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  // launch::non_cooperative(
-  //     stream, tiled_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
-  //     block_size, config, csr.rows, csr.cols, csr.nnzs,
-  //     csr.offsets.data().get(), csr.indices.data().get(),
-  //     csr.values.data().get(), x.data().get(), y.data().get());
+  launch::non_cooperative(
+      stream, tiled_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
+      block_size, config, csr.rows, csr.cols, csr.nnzs,
+      csr.offsets.data().get(), csr.indices.data().get(),
+      csr.values.data().get(), x.data().get(), y.data().get());
 
-  launch::cooperative(stream, tiled_spmv<setup_t, index_t, offset_t, type_t>,
-                      grid_size, block_size, config, csr.rows, csr.cols,
-                      csr.nnzs, csr.offsets.data().get(),
-                      csr.indices.data().get(), csr.values.data().get(),
-                      x.data().get(), y.data().get());
+  // launch::cooperative(stream, tiled_spmv<setup_t, index_t, offset_t, type_t>,
+  //                     grid_size, block_size, config, csr.rows, csr.cols,
+  //                     csr.nnzs, csr.offsets.data().get(),
+  //                     csr.indices.data().get(), csr.values.data().get(),
+  //                     x.data().get(), y.data().get());
 
   cudaStreamSynchronize(stream);
 
@@ -196,7 +197,7 @@ int main(int argc, char** argv) {
 
     std::size_t errors = util::equal(
         y.data().get(), h_y.data(), csr.rows,
-        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-4; },
+        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
         parameters.verbose);
 
     std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
