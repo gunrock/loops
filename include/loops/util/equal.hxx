@@ -13,6 +13,8 @@
 
 #include <cstddef>
 #include <iostream>
+#include <iomanip>
+#include <limits>
 
 namespace loops {
 namespace util {
@@ -49,7 +51,9 @@ std::size_t equal(const type_t* d_ptr,
   for (std::size_t i = 0; i < n; ++i) {
     if (error_op(d_vec[i], h_ptr[i])) {
       if (verbose)
-        std::cout << "Error[" << i << "]: " << d_vec[i] << " != " << h_ptr[i]
+        std::cout << "Error[" << i << "]: " << std::setw(10) << std::fixed
+                  << std::setprecision(std::numeric_limits<type_t>::digits10)
+                  << d_vec[i] << " != " << std::setw(10) << h_ptr[i]
                   << std::endl;
       ++error_count;
     }

@@ -132,26 +132,22 @@ class setup<algroithms_t::block_mapped,
                                                  storage_t* sh_aggregates,
                                                  cg_block_tile_t& partition) {
     storage_t* p_st = st + (partition.meta_group_rank() * partition.size());
-    // auto tile_id = threadIdx.x + blockIdx.x * blockDim.x;
-    // atoms_t atom_to_process = th_st[0];
-    // atoms_t atoms_to_process = 0;
-    // if (tile_id < tile_traits_t::size()) {
-    //   atoms_to_process =
-    //       tile_traits_t::begin()[tile_id + 1] -
-    //       tile_traits_t::begin()[tile_id];
-    // }
 
     p_st[partition.thread_rank()] =
         cooperative_groups::exclusive_scan(partition, th_st[0]);
     partition.sync();
+
+#ifdef DEBUG_SCHEDULE
     // printf("threadIdx.x = %d, nnzs = %d, p_st[%d] : offset = %d\n",
     //        (int)threadIdx.x, (int)atom_to_process,
     //        (int)partition.thread_rank(), (int)p_st[partition.thread_rank()]);
+#endif
     if (partition.thread_rank() == partition.size() - 1) {
-      // printf(
-      //     "Last Thread of Every Partition = %d, th_st[0] = %d, p_st[] =
-      //     %d\n", (int)partition.thread_rank(), (int)th_st[0],
-      //     (int)p_st[partition.thread_rank()]);
+#ifdef DEBUG_SCHEDULE
+      // printf("Last Thread of Every Partition = %d, th_st[0] = %d, p_st[] =
+      //        % d\n ", (int)partition.thread_rank(), (int)th_st[0],
+      //        (int)p_st[partition.thread_rank()]);
+#endif
       // Accumulate tiled aggregates.
       sh_aggregates[partition.meta_group_rank()] =
           p_st[partition.thread_rank()] + th_st[0];
@@ -202,7 +198,11 @@ class setup<algroithms_t::block_mapped,
                              tiles_t& tile_id,
                              tiles_t& v_tile_id,
                              cg_block_tile_t& partition) {
-    // printf("row vs. id : %d vs. %d\n", (int)tile_id, (int)v_tile_id);
+#ifdef DEBUG_SCHEDULE
+    // printf("Shared Memory: %d @ %d/%d\n",
+    //        (int)(partition.meta_group_rank() * THREADS_PER_TILE),
+    //        (int)partition.meta_group_rank(), (int)THREADS_PER_TILE);
+#endif
     storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
     return tile_traits_t::begin()[tile_id] + v_atom - p_st[v_tile_id];
   }
