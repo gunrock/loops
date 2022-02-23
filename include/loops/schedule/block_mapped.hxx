@@ -131,7 +131,7 @@ class setup<algroithms_t::block_mapped,
                                                  storage_t* th_st,
                                                  storage_t* sh_aggregates,
                                                  cg_block_tile_t& partition) {
-    storage_t* p_st = st + (partition.meta_group_rank() * partition.size());
+    storage_t* p_st = st + (partition.meta_group_rank() * threads_per_tile);
 
     p_st[partition.thread_rank()] =
         cooperative_groups::exclusive_scan(partition, th_st[0]);
@@ -164,6 +164,7 @@ class setup<algroithms_t::block_mapped,
     auto b = cooperative_groups::this_thread_block();
 
     auto thread_id = g.thread_rank();
+    auto block_id = b.thread_rank();
     auto local_id = partition.thread_rank();
 
     int length = thread_id - local_id + partition.size();
@@ -179,7 +180,7 @@ class setup<algroithms_t::block_mapped,
                              atoms_t& virtual_atom,
                              cg_block_tile_t& partition) {
     int length = get_length(partition);
-    storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
+    storage_t* p_st = st + (partition.meta_group_rank() * threads_per_tile);
     auto it =
         thrust::upper_bound(thrust::seq, p_st, p_st + length, virtual_atom);
     auto x = thrust::distance(p_st, it) - 1;
@@ -200,10 +201,10 @@ class setup<algroithms_t::block_mapped,
                              cg_block_tile_t& partition) {
 #ifdef DEBUG_SCHEDULE
     // printf("Shared Memory: %d @ %d/%d\n",
-    //        (int)(partition.meta_group_rank() * THREADS_PER_TILE),
-    //        (int)partition.meta_group_rank(), (int)THREADS_PER_TILE);
+    //        (int)(partition.meta_group_rank() * partition.size()),
+    //        (int)partition.meta_group_rank(), (int)partition.size());
 #endif
-    storage_t* p_st = st + (partition.meta_group_rank() * THREADS_PER_TILE);
+    storage_t* p_st = st + (partition.meta_group_rank() * threads_per_tile);
     return tile_traits_t::begin()[tile_id] + v_atom - p_st[v_tile_id];
   }
 };  // namespace schedule
