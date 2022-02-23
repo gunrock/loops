@@ -9,10 +9,6 @@
  *
  */
 
-// #define DEBUG 1
-// #define DEBUG_SCHEDULE 1
-// #define DEBUG_IDX 1
-
 #include "spmv.hxx"
 
 // template <typename index_t, typename offset_t, typename type_t>
@@ -75,70 +71,44 @@ __global__ void spmv(setup_t config,
   }
 }
 
-template <typename setup_t,
+template <std::size_t threads_per_block,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void /* __launch_bounds__(setup_t::threads_per_block, 2) */
-tiled_spmv(setup_t config,
-           const std::size_t rows,
-           const std::size_t cols,
-           const std::size_t nnz,
-           const offset_t* offsets,
-           const index_t* indices,
-           const type_t* values,
-           const type_t* x,
-           type_t* y) {
+__global__ void __launch_bounds__(threads_per_block, 2)
+    tiled_spmv(std::size_t rows,
+               std::size_t cols,
+               std::size_t nnz,
+               offset_t* offsets,
+               index_t* indices,
+               const type_t* values,
+               const type_t* x,
+               type_t* y) {
+  using setup_t = schedule::setup<schedule::algroithms_t::tile_mapped,
+                                  threads_per_block, 32, index_t, offset_t>;
+
+  /// Allocate temporary storage for the schedule.
   using storage_t = typename setup_t::storage_t;
-  using tile_storage_t = typename setup_t::tile_storage_t;
+  __shared__ storage_t temporary_storage;
 
-  // reserve shared memory for thread_block_tile usage.
-  __shared__ cooperative_groups::experimental::block_tile_memory<
-      4, setup_t::threads_per_block>
-      groups_space;
+  /// Construct the schedule.
+  setup_t config(temporary_storage, offsets, rows, nnz);
+  auto p = config.partition();
 
-  __shared__ storage_t
-      tile_aggregates[setup_t::threads_per_block / setup_t::threads_per_tile];
-  __shared__ storage_t storage[setup_t::threads_per_block];
-  __shared__ tile_storage_t tile_id_storage[setup_t::threads_per_block];
-  storage_t thread_offsets[1];
-
-  auto g = cooperative_groups::this_grid();
-  auto b = cooperative_groups::experimental::this_thread_block(groups_space);
-  auto p = cooperative_groups::experimental::tiled_partition<
-      setup_t::threads_per_tile>(b);
-
-  auto idx = g.thread_rank();
-  if (idx < rows) {
-#ifdef DEBUG_IDX
-    printf("idx, g.idx : (%d, %d)\n", (int)idx, (int)g.thread_rank());
-#endif
-    tile_id_storage[p.thread_rank() + (p.meta_group_rank() * p.size())] = idx;
-    thread_offsets[0] = offsets[idx + 1] - offsets[idx];
-  } else {
-    tile_id_storage[p.thread_rank() + (p.meta_group_rank() * p.size())] = -1;
-    thread_offsets[0] = 0;
-  }
-
-  for (auto virtual_atom :
-       config.virtual_atoms(storage, thread_offsets, tile_aggregates, p)) {
-    auto row = config.tile_id(storage, virtual_atom, p);
+  for (auto virtual_atom : config.virtual_atoms(p)) {
+    auto row = config.tile_id(virtual_atom, p);
 
     if (!(config.is_valid_tile(row, p)))
       continue;
 
     typename setup_t::tiles_t r =
-        tile_id_storage[row + (p.meta_group_rank() * p.size())];
+        temporary_storage.tiles_indices[row + (p.meta_group_rank() * p.size())];
+
     if (r == -1)
       continue;
 
-    auto nz = config.atom_id(storage, virtual_atom, r, row, p);
+    auto nz = config.atom_id(virtual_atom, r, row, p);
     atomicAdd(&y[r], values[nz] * x[indices[nz]]);
-
-#ifdef DEBUG
-    printf("y[%d] @ [%d] = %f * %f @ %d\n",  // <---
-           r, nz, values[nz], x[indices[nz]], indices[nz]);
-#endif
   }
 }
 
@@ -163,31 +133,35 @@ int main(int argc, char** argv) {
 
   // Create a schedule.
   constexpr std::size_t block_size = 128;
-  constexpr std::size_t tile_size = 4;
-  using setup_t = schedule::setup<schedule::algroithms_t::block_mapped,
-                                  block_size, tile_size, index_t, offset_t>;
 
-  setup_t config(csr.offsets.data().get(), csr.rows, csr.nnzs);
-
-  // Compute the spmv.
+  /// Set-up kernel launch parameters and run the kernel.
   std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
+  /// Traditional kernel launch, this is nice for tile mapped scheduling, which
+  /// will allow blocks to be scheduled in and out as needed. And will rely on
+  /// NVIDIA's hardware schedule to schedule the blocks efficiently.
   launch::non_cooperative(
-      stream, tiled_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
-      block_size, config, csr.rows, csr.cols, csr.nnzs,
-      csr.offsets.data().get(), csr.indices.data().get(),
-      csr.values.data().get(), x.data().get(), y.data().get());
+      stream, tiled_spmv<block_size, index_t, offset_t, type_t>, grid_size,
+      block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
+      csr.indices.data().get(), csr.values.data().get(), x.data().get(),
+      y.data().get());
 
-  // launch::cooperative(stream, tiled_spmv<setup_t, index_t, offset_t, type_t>,
-  //                     grid_size, block_size, config, csr.rows, csr.cols,
-  //                     csr.nnzs, csr.offsets.data().get(),
-  //                     csr.indices.data().get(), csr.values.data().get(),
-  //                     x.data().get(), y.data().get());
+  /// Cooperative kernel launch; requires a fixed number of blocks per grid to
+  /// be launched, this number can be determined by using CUDA's occupancy API
+  /// to figure out how many blocks will run concurrently at all times per SM.
+  /// And then we simply loop over the entire work within the kernel.
+  // launch::cooperative(stream, tiled_spmv<block_size, index_t, offset_t,
+  // type_t>,
+  //                     grid_size, block_size, csr.rows, csr.cols, csr.nnzs,
+  //                     csr.offsets.data().get(), csr.indices.data().get(),
+  //                     csr.values.data().get(), x.data().get(),
+  //                     y.data().get());
 
   cudaStreamSynchronize(stream);
 
+  /// Validation code, can be safely ignored.
   if (parameters.validate) {
     auto h_y = cpu::spmv(csr, x);
 
