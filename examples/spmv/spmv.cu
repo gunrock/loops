@@ -11,6 +11,7 @@
 
 // #define DEBUG 1
 // #define DEBUG_SCHEDULE 1
+// #define DEBUG_IDX 1
 
 #include "spmv.hxx"
 
@@ -102,28 +103,22 @@ tiled_spmv(setup_t config,
   __shared__ tile_storage_t tile_id_storage[setup_t::threads_per_block];
   storage_t thread_offsets[1];
 
-#ifdef DEBUG
-  if (threadIdx.x == 0) {
-    printf("block id = %d\n", blockIdx.x);
-  }
-#endif
-
-  auto idx = threadIdx.x + blockIdx.x * blockDim.x;
-  if (idx < rows) {
-#ifdef DEBUG
-    printf("idx, rows : (%d, %d)\n", (int)idx, (int)rows);
-#endif
-    tile_id_storage[threadIdx.x] = idx;
-    thread_offsets[0] = offsets[idx + 1] - offsets[idx];
-  } else {
-    tile_id_storage[threadIdx.x] = -1;
-    thread_offsets[0] = 0;
-  }
-
   auto g = cooperative_groups::this_grid();
   auto b = cooperative_groups::experimental::this_thread_block(groups_space);
   auto p = cooperative_groups::experimental::tiled_partition<
       setup_t::threads_per_tile>(b);
+
+  auto idx = g.thread_rank();
+  if (idx < rows) {
+#ifdef DEBUG_IDX
+    printf("idx, g.idx : (%d, %d)\n", (int)idx, (int)g.thread_rank());
+#endif
+    tile_id_storage[p.thread_rank() + (p.meta_group_rank() * p.size())] = idx;
+    thread_offsets[0] = offsets[idx + 1] - offsets[idx];
+  } else {
+    tile_id_storage[p.thread_rank() + (p.meta_group_rank() * p.size())] = -1;
+    thread_offsets[0] = 0;
+  }
 
   for (auto virtual_atom :
        config.virtual_atoms(storage, thread_offsets, tile_aggregates, p)) {
@@ -132,7 +127,8 @@ tiled_spmv(setup_t config,
     if (!(config.is_valid_tile(row, p)))
       continue;
 
-    typename setup_t::tiles_t r = tile_id_storage[row];
+    typename setup_t::tiles_t r =
+        tile_id_storage[row + (p.meta_group_rank() * p.size())];
     if (r == -1)
       continue;
 
@@ -166,8 +162,8 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
   // Create a schedule.
-  constexpr std::size_t block_size = 32;
-  constexpr std::size_t tile_size = 32;
+  constexpr std::size_t block_size = 128;
+  constexpr std::size_t tile_size = 4;
   using setup_t = schedule::setup<schedule::algroithms_t::block_mapped,
                                   block_size, tile_size, index_t, offset_t>;
 
