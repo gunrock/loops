@@ -1,7 +1,8 @@
 /**
  * @file tile_mapped.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief
+ * @brief Tile-mapped schedule (map work to tiles, process using individual
+ * threads within the tile.)
  * @version 0.1
  * @date 2022-02-04
  *
@@ -12,13 +13,14 @@
 #pragma once
 
 #include <loops/grid_stride_range.hxx>
-#include <loops/schedule.hxx>
 
 #include <thrust/binary_search.h>
 #include <thrust/execution_policy.h>
 #include <thrust/distance.h>
 
+#ifndef _CG_ABI_EXPERIMENTAL
 #define _CG_ABI_EXPERIMENTAL
+#endif
 
 #include <cooperative_groups.h>
 #include <cooperative_groups/scan.h>

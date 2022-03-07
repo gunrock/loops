@@ -112,6 +112,48 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   }
 }
 
+template <std::size_t threads_per_block,
+          typename index_t,
+          typename offset_t,
+          typename type_t>
+__global__ void __launch_bounds__(threads_per_block, 2)
+    merge_spmv(std::size_t rows,
+               std::size_t cols,
+               std::size_t nnz,
+               offset_t* offsets,
+               index_t* indices,
+               const type_t* values,
+               const type_t* x,
+               type_t* y) {
+  using setup_t = schedule::setup<schedule::algroithms_t::work_oriented,
+                                  threads_per_block, 1, index_t, offset_t>;
+
+  /// Construct the schedule.
+  setup_t config(offsets, rows, nnz);
+  auto map = config.init();
+  // printf("row (start, end) = (%d, %d)\n nz (start, end) = (%d, %d)\n",
+  //        (int)map.first.first, (int)map.second.first, (int)map.first.second,
+  //        (int)map.second.second);
+
+  for (auto row : config.tiles(map)) {
+    // printf("yikes!\n");
+    for (auto nz : config.atoms(row, map)) {
+      if (row == 38)
+        printf("row, nz = %d, %d\n", row, nz);
+      atomicAdd(&(y[row]), values[nz] * x[indices[nz]]);
+    }
+  }
+
+  auto remainder_row = map.second.first;
+  // for (auto remainder_row : config.remainder_tiles(map)) {
+  for (auto nz : config.remainder_atoms(map)) {
+    if (remainder_row == 38)
+      printf("rem, nz = %d, %d\n", (int)remainder_row, (int)nz);
+    atomicAdd(&(y[remainder_row]), values[nz] * x[indices[nz]]);
+  }
+  // }
+}
+
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
@@ -132,21 +174,21 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
   // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  constexpr std::size_t block_size = 2;
 
   /// Set-up kernel launch parameters and run the kernel.
-  std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
   /// Traditional kernel launch, this is nice for tile mapped scheduling, which
   /// will allow blocks to be scheduled in and out as needed. And will rely on
   /// NVIDIA's hardware schedule to schedule the blocks efficiently.
-  launch::non_cooperative(
-      stream, tiled_spmv<block_size, index_t, offset_t, type_t>, grid_size,
-      block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
-      csr.indices.data().get(), csr.values.data().get(), x.data().get(),
-      y.data().get());
+  // std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
+  // launch::non_cooperative(
+  //     stream, tiled_spmv<block_size, index_t, offset_t, type_t>, grid_size,
+  //     block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
+  //     csr.indices.data().get(), csr.values.data().get(), x.data().get(),
+  //     y.data().get());
 
   /// Cooperative kernel launch; requires a fixed number of blocks per grid to
   /// be launched, this number can be determined by using CUDA's occupancy API
@@ -158,6 +200,13 @@ int main(int argc, char** argv) {
   //                     csr.offsets.data().get(), csr.indices.data().get(),
   //                     csr.values.data().get(), x.data().get(),
   //                     y.data().get());
+
+  std::size_t grid_size = ((csr.rows + csr.nnzs) + block_size - 1) / block_size;
+  launch::non_cooperative(
+      stream, merge_spmv<block_size, index_t, offset_t, type_t>, grid_size,
+      block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
+      csr.indices.data().get(), csr.values.data().get(), x.data().get(),
+      y.data().get());
 
   cudaStreamSynchronize(stream);
 
