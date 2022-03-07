@@ -62,7 +62,7 @@ add_library(loops INTERFACE)
 ############### SET TARGET PROPERTIES ##############
 ####################################################
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 71)
+  set(CMAKE_CUDA_ARCHITECTURES 61)
 endif()
 
 set_target_properties(loops 
@@ -114,7 +114,7 @@ target_include_directories(loops
   INTERFACE ${THRUST_INCLUDE_DIR}
   INTERFACE ${CUB_INCLUDE_DIR}
   INTERFACE ${MODERNGPU_INCLUDE_DIR}
-  INTERFACE ${RAPIDJSON_INCLUDE_DIR}
+  # INTERFACE ${RAPIDJSON_INCLUDE_DIR}
   INTERFACE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
 
