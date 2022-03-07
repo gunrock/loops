@@ -23,6 +23,7 @@ namespace schedule {
 enum algroithms_t {
   work_oriented,  /// < Work oriented scheduling algorithm.
   thread_mapped,  /// < Thread mapped scheduling algorithm.
+  tile_mapped,    /// < Tile mapped scheduling algorithm.
   bucketing,      /// < Bucketing scheduling algorithm.
 };
 
@@ -36,12 +37,15 @@ class tile_traits;
  * @brief
  *
  * @tparam scheme
+ * @tparam threads_per_block
  * @tparam tiles_t
  * @tparam atoms_t
  * @tparam tile_size_t
  * @tparam atom_size_t
  */
 template <algroithms_t scheme,
+          std::size_t threads_per_block,
+          std::size_t threads_per_tile,
           typename tiles_t,
           typename atoms_t,
           typename tile_size_t = std::size_t,
@@ -52,3 +56,4 @@ class setup;
 }  // namespace loops
 
 #include <loops/schedule/thread_mapped.hxx>
+#include <loops/schedule/tile_mapped.hxx>

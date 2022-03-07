@@ -18,6 +18,8 @@
 #include <loops/container/vector.hxx>
 #include <loops/container/market.hxx>
 #include <loops/util/filepath.hxx>
+#include <loops/util/launch.hxx>
+#include <loops/util/equal.hxx>
 #include <loops/memory.hxx>
 #include <cxxopts.hpp>
 
