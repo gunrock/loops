@@ -95,20 +95,20 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   setup_t config(temporary_storage, offsets, rows, nnz);
   auto p = config.partition();
 
-  for (auto virtual_atom : config.virtual_atoms(p)) {
-    auto row = config.tile_id(virtual_atom, p);
+  for (auto virtual_atom : config.atom_accessor(p)) {
+    auto virtual_tile = config.tile_accessor(virtual_atom, p);
 
-    if (!(config.is_valid_tile(row, p)))
+    if (!(config.is_valid_accessor(virtual_tile, p)))
       continue;
 
-    typename setup_t::tiles_t r =
-        temporary_storage.tiles_indices[row + (p.meta_group_rank() * p.size())];
+    auto row = config.tile_id(virtual_tile, p);
 
-    if (r == -1)
-      continue;
+    // XXX: Not sure if this check is needed.
+    // if (row == -1)
+    //   continue;
 
-    auto nz = config.atom_id(virtual_atom, r, row, p);
-    atomicAdd(&y[r], values[nz] * x[indices[nz]]);
+    auto nz_idx = config.atom_id(virtual_atom, row, virtual_tile, p);
+    atomicAdd(&(y[row]), values[nz_idx] * x[indices[nz_idx]]);
   }
 }
 

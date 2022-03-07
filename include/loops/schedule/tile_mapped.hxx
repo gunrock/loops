@@ -148,7 +148,7 @@ class setup<algroithms_t::tile_mapped,
   }
 
   template <typename partition_t>
-  __device__ step_range_t<atoms_t> virtual_atoms(partition_t& p) {
+  __device__ step_range_t<atoms_t> atom_accessor(partition_t& p) {
     atoms_t* p_st =
         buffer.atoms_offsets + (p.meta_group_rank() * threads_per_tile);
     auto g = cg::this_grid();
@@ -190,8 +190,8 @@ class setup<algroithms_t::tile_mapped,
   }
 
   template <typename partition_t>
-  __device__ __forceinline__ tiles_t tile_id(atoms_t& virtual_atom,
-                                             partition_t& p) {
+  __device__ __forceinline__ tiles_t tile_accessor(atoms_t& virtual_atom,
+                                                   partition_t& p) {
     int length = get_length(p);
     atoms_t* p_st =
         buffer.atoms_offsets + (p.meta_group_rank() * threads_per_tile);
@@ -202,9 +202,15 @@ class setup<algroithms_t::tile_mapped,
   }
 
   template <typename partition_t>
-  __device__ __forceinline__ tiles_t is_valid_tile(tiles_t& tile_id,
-                                                   partition_t& p) {
+  __device__ __forceinline__ bool is_valid_accessor(tiles_t& tile_id,
+                                                    partition_t& p) {
     return tile_id < get_length(p);
+  }
+
+  template <typename partition_t>
+  __device__ __forceinline__ tiles_t tile_id(tiles_t& v_tile_id,
+                                             partition_t& p) {
+    return buffer.tiles_indices[v_tile_id + (p.meta_group_rank() * p.size())];
   }
 
   template <typename partition_t>
@@ -216,6 +222,7 @@ class setup<algroithms_t::tile_mapped,
         buffer.atoms_offsets + (p.meta_group_rank() * threads_per_tile);
     return tile_traits_t::begin()[tile_id] + v_atom - p_st[v_tile_id];
   }
+
 };  // namespace schedule
 
 }  // namespace schedule
