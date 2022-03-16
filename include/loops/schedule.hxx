@@ -20,17 +20,17 @@ namespace schedule {
  * @brief Load balancing algorithms.
  *
  */
-enum algroithms_t {
+enum algorithms_t {
   work_oriented,  /// < Work oriented scheduling algorithm.
   thread_mapped,  /// < Thread mapped scheduling algorithm.
   tile_mapped,    /// < Tile mapped scheduling algorithm.
   bucketing,      /// < Bucketing scheduling algorithm.
 };
 
-template <algroithms_t scheme, typename atoms_t, typename atom_size_t>
+template <algorithms_t scheme, typename atoms_t, typename atom_size_t>
 class atom_traits;
 
-template <algroithms_t scheme, typename tiles_t, typename tile_size_t>
+template <algorithms_t scheme, typename tiles_t, typename tile_size_t>
 class tile_traits;
 
 /**
@@ -44,7 +44,7 @@ class tile_traits;
  * @tparam tile_size_t Type of the tile size (default: std::size_t).
  * @tparam atom_size_t Type of the atom size (default: std::size_t).
  */
-template <algroithms_t scheme,
+template <algorithms_t scheme,
           std::size_t threads_per_block,
           std::size_t threads_per_tile,
           typename tiles_t,

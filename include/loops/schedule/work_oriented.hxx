@@ -29,7 +29,7 @@ __host__ __device__ constexpr auto div(T const& t, U const& u) {
 }
 
 template <typename atoms_type, typename atom_size_type>
-class atom_traits<algroithms_t::work_oriented, atoms_type, atom_size_type> {
+class atom_traits<algorithms_t::work_oriented, atoms_type, atom_size_type> {
  public:
   using atoms_t = atoms_type;
   using atoms_iterator_t = atoms_t*;
@@ -51,7 +51,7 @@ class atom_traits<algroithms_t::work_oriented, atoms_type, atom_size_type> {
 };
 
 template <typename tiles_type, typename tile_size_type>
-class tile_traits<algroithms_t::work_oriented, tiles_type, tile_size_type> {
+class tile_traits<algorithms_t::work_oriented, tiles_type, tile_size_type> {
  public:
   using tiles_t = tiles_type;
   using tiles_iterator_t = tiles_t*;
@@ -76,16 +76,16 @@ template <std::size_t THREADS_PER_BLOCK,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type>
-class setup<algroithms_t::work_oriented,
+class setup<algorithms_t::work_oriented,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algroithms_t::work_oriented,
+            atom_size_type> : public tile_traits<algorithms_t::work_oriented,
                                                  tiles_type,
                                                  tile_size_type>,
-                              public atom_traits<algroithms_t::work_oriented,
+                              public atom_traits<algorithms_t::work_oriented,
                                                  atoms_type,
                                                  atom_size_type> {
  public:
@@ -97,9 +97,9 @@ class setup<algroithms_t::work_oriented,
   using atom_size_t = atom_size_type;
 
   using tile_traits_t =
-      tile_traits<algroithms_t::work_oriented, tiles_type, tile_size_type>;
+      tile_traits<algorithms_t::work_oriented, tiles_type, tile_size_type>;
   using atom_traits_t =
-      atom_traits<algroithms_t::work_oriented, atoms_type, atom_size_type>;
+      atom_traits<algorithms_t::work_oriented, atoms_type, atom_size_type>;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
