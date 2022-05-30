@@ -103,10 +103,6 @@ __global__ void __launch_bounds__(threads_per_block, 2)
 
     auto row = config.tile_id(virtual_tile, p);
 
-    // XXX: Not sure if this check is needed.
-    // if (row == -1)
-    //   continue;
-
     auto nz_idx = config.atom_id(virtual_atom, row, virtual_tile, p);
     atomicAdd(&(y[row]), values[nz_idx] * x[indices[nz_idx]]);
   }
@@ -128,30 +124,35 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   using setup_t = schedule::setup<schedule::algorithms_t::work_oriented,
                                   threads_per_block, 1, index_t, offset_t>;
 
-  /// Construct the schedule.
   setup_t config(offsets, rows, nnz);
   auto map = config.init();
-  // printf("row (start, end) = (%d, %d)\n nz (start, end) = (%d, %d)\n",
-  //        (int)map.first.first, (int)map.second.first, (int)map.first.second,
-  //        (int)map.second.second);
 
+  type_t sum = 0;
   for (auto row : config.tiles(map)) {
-    // printf("yikes!\n");
+    // printf("row = %d\n", row);
     for (auto nz : config.atoms(row, map)) {
-      if (row == 38)
-        printf("row, nz = %d, %d\n", row, nz);
-      atomicAdd(&(y[row]), values[nz] * x[indices[nz]]);
+      // printf("nz = %d\n", nz);
+      sum += values[nz] * x[indices[nz]];
     }
+    y[row] = sum;
+    // if (row == 0)
+    //   printf("sum = %f\n", sum);
+    sum = 0;
   }
 
-  auto remainder_row = map.second.first;
-  // for (auto remainder_row : config.remainder_tiles(map)) {
+  int remainder_row = map.second.first;
+  // int remainder_nz = map.second.second - map.first.second;
+  // printf("remainder_row = %d\n", remainder_row);
+  // printf("remainder_nz = %d\n", remainder_nz);
+  // printf("(nz start) map.first.second = %d\n", map.first.second);
+  // printf("(nz end) map.second.second = %d\n", map.second.second);
   for (auto nz : config.remainder_atoms(map)) {
-    if (remainder_row == 38)
-      printf("rem, nz = %d, %d\n", (int)remainder_row, (int)nz);
-    atomicAdd(&(y[remainder_row]), values[nz] * x[indices[nz]]);
+    // printf("(END) nz = %d\n", nz);
+    sum += values[nz] * x[indices[nz]];
   }
-  // }
+  // if (remainder_row == 0)
+  //   printf("sum = %f\n", sum);
+  atomicAdd(&(y[remainder_row]), sum);
 }
 
 int main(int argc, char** argv) {
@@ -174,7 +175,7 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
   // Create a schedule.
-  constexpr std::size_t block_size = 2;
+  constexpr std::size_t block_size = 128;
 
   /// Set-up kernel launch parameters and run the kernel.
   cudaStream_t stream;
@@ -201,7 +202,9 @@ int main(int argc, char** argv) {
   //                     csr.values.data().get(), x.data().get(),
   //                     y.data().get());
 
-  std::size_t grid_size = ((csr.rows + csr.nnzs) + block_size - 1) / block_size;
+  std::size_t grid_size =  // 1;
+                           // csr.rows + csr.nnzs;
+      (((csr.rows + csr.nnzs) + block_size) - 1) / block_size;
   launch::non_cooperative(
       stream, merge_spmv<block_size, index_t, offset_t, type_t>, grid_size,
       block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),

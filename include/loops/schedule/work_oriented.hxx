@@ -120,19 +120,23 @@ class setup<algorithms_t::work_oriented,
       : tile_traits_t(_num_tiles, _tiles),
         atom_traits_t(_num_atoms),
         total_work(_num_tiles + _num_atoms),
-        num_threads(div(total_work, items_per_tile)),
+        num_threads(threads_per_block),  // items_per_tile * (div(total_work,
+                                         // items_per_tile))),
         work_per_thread(div(total_work, num_threads)) {}
 
   __device__ __forceinline__ auto init() {
     thrust::counting_iterator<atoms_t> atoms_indices;
 
     std::size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+    // int hid = (blockIdx.x * gridDim.y) + blockIdx.y;
+    // if (threadIdx.x < 2) {
     std::size_t upper = min(work_per_thread * tid, total_work);
     std::size_t lower = min(upper + work_per_thread, total_work);
-    auto st = search(upper, tile_traits_t::begin(), atoms_indices,
+    auto st = search(upper, tile_traits_t::begin() + 1, atoms_indices,
                      tile_traits_t::size(), atom_traits_t::size());
-    auto en = search(lower, tile_traits_t::begin(), atoms_indices,
+    auto en = search(lower, tile_traits_t::begin() + 1, atoms_indices,
                      tile_traits_t::size(), atom_traits_t::size());
+    // }
     return thrust::make_pair(st, en);
   }
 
@@ -146,7 +150,7 @@ class setup<algorithms_t::work_oriented,
   __device__ __forceinline__ step_range_t<atoms_t> atoms(tiles_t t, map_t& m) {
     auto num_atoms = tile_traits_t::begin()[(t + 1)];
     auto nz_start = m.first.second;
-    m.first.second += num_atoms;
+    m.first.second += (num_atoms - nz_start);
     return custom_stride_range(atoms_t(nz_start), num_atoms, atoms_t(1));
   }
 
