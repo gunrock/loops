@@ -70,8 +70,8 @@ int main(int argc, char** argv) {
   cudaStreamCreate(&stream);
 
   // Create a schedule.
-  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped,
-                                  block_size, 1, index_t, offset_t>;
+  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1,
+                                  index_t, offset_t>;
   setup_t config(csr.offsets.data().get(), csr.rows, csr.nnzs);
 
   std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
