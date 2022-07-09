@@ -62,7 +62,7 @@ add_library(loops INTERFACE)
 ############### SET TARGET PROPERTIES ##############
 ####################################################
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 61)
+  set(CMAKE_CUDA_ARCHITECTURES 75)
 endif()
 
 set_target_properties(loops 
