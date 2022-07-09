@@ -57,7 +57,8 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   }
   // if (remainder_row == 0)
   //   printf("sum = %f\n", sum);
-  atomicAdd(&(y[remainder_row]), sum);
+  if (sum != 0)
+    atomicAdd(&(y[remainder_row]), sum);
 }
 
 int main(int argc, char** argv) {
@@ -76,6 +77,9 @@ int main(int argc, char** argv) {
   vector_t<type_t> x(csr.rows);
   vector_t<type_t> y(csr.rows);
 
+  std::cout << "# Rows: " << csr.rows << std::endl;
+  std::cout << "# Columns: " << csr.cols << std::endl;
+
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
@@ -86,8 +90,7 @@ int main(int argc, char** argv) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  std::size_t grid_size =  // 1;
-                           // csr.rows + csr.nnzs;
+  std::size_t grid_size =
       (((csr.rows + csr.nnzs) + block_size) - 1) / block_size;
   launch::non_cooperative(
       stream, merge_spmv<block_size, index_t, offset_t, type_t>, grid_size,
