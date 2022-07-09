@@ -13,8 +13,10 @@
 
 #include <thrust/distance.h>
 #include <thrust/iterator/counting_iterator.h>
-#include <thrust/random.h>
+#include <thrust/random/linear_congruential_engine.h>
+#include <thrust/random/uniform_real_distribution.h>
 #include <thrust/transform.h>
+#include <thrust/execution_policy.h>
 
 namespace loops {
 namespace generate {
@@ -37,7 +39,7 @@ void uniform_distribution(iterator_t begin_it,
                           type_t end = 1.0f) {
   int size = thrust::distance(begin_it, end_it);
   auto generate_random = [=] __host__ __device__(std::size_t i) -> type_t {
-    thrust::default_random_engine rng;
+    thrust::minstd_rand rng;
     thrust::uniform_real_distribution<type_t> uniform(begin, end);
     rng.discard(i);
     return uniform(rng);

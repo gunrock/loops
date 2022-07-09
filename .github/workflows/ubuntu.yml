@@ -21,12 +21,12 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Fetch CUDA toolkit using Jimver/cuda-toolkit@v0.2.5
+      # Fetch CUDA toolkit using Jimver/cuda-toolkit@v0.2.7
       - name: Fetch CUDA toolkit
-        uses: Jimver/cuda-toolkit@v0.2.5
+        uses: Jimver/cuda-toolkit@v0.2.7
         id: cuda-toolkit
         with:
-          cuda: '11.5.1'
+          cuda: '11.7.0'
           linux-local-args: '["--toolkit"]'
 
       # Runs a single command using the runners shell
