@@ -1,7 +1,7 @@
 /**
  * @file schedule.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief
+ * @brief Header file for the schedule class.
  * @version 0.1
  * @date 2022-02-04
  *
