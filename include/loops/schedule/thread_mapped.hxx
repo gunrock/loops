@@ -18,7 +18,7 @@ namespace loops {
 namespace schedule {
 
 template <typename atoms_type, typename atom_size_type>
-class atom_traits<algroithms_t::thread_mapped, atoms_type, atom_size_type> {
+class atom_traits<algorithms_t::thread_mapped, atoms_type, atom_size_type> {
  public:
   using atoms_t = atoms_type;
   using atoms_iterator_t = atoms_t*;
@@ -40,7 +40,7 @@ class atom_traits<algroithms_t::thread_mapped, atoms_type, atom_size_type> {
 };
 
 template <typename tiles_type, typename tile_size_type>
-class tile_traits<algroithms_t::thread_mapped, tiles_type, tile_size_type> {
+class tile_traits<algorithms_t::thread_mapped, tiles_type, tile_size_type> {
  public:
   using tiles_t = tiles_type;
   using tiles_iterator_t = tiles_t*;
@@ -63,16 +63,16 @@ template <typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type>
-class setup<algroithms_t::thread_mapped,
+class setup<algorithms_t::thread_mapped,
             1,
             1,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algroithms_t::thread_mapped,
+            atom_size_type> : public tile_traits<algorithms_t::thread_mapped,
                                                  tiles_type,
                                                  tile_size_type>,
-                              public atom_traits<algroithms_t::thread_mapped,
+                              public atom_traits<algorithms_t::thread_mapped,
                                                  atoms_type,
                                                  atom_size_type> {
  public:
@@ -84,9 +84,9 @@ class setup<algroithms_t::thread_mapped,
   using atom_size_t = atom_size_type;
 
   using tile_traits_t =
-      tile_traits<algroithms_t::thread_mapped, tiles_type, tile_size_type>;
+      tile_traits<algorithms_t::thread_mapped, tiles_type, tile_size_type>;
   using atom_traits_t =
-      atom_traits<algroithms_t::thread_mapped, atoms_type, atom_size_type>;
+      atom_traits<algorithms_t::thread_mapped, atoms_type, atom_size_type>;
 
   /**
    * @brief Default constructor.

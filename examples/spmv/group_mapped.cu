@@ -10,66 +10,7 @@
  */
 
 #include "spmv.hxx"
-
-// template <typename index_t, typename offset_t, typename type_t>
-// __global__ void spmv(const std::size_t rows,
-//                      const std::size_t cols,
-//                      const std::size_t nnz,
-//                      const offset_t* offsets,
-//                      const index_t* indices,
-//                      const type_t* values,
-//                      const type_t* x,
-//                      type_t* y) {
-//   /// Equivalent to:
-//   /// row = blockIdx.x * blockDim.x + threadIdx.x; (init)
-//   /// row < rows; (boundary condition)
-//   /// row += gridDim.x * blockDim.x. (step)
-//   for (auto row : grid_stride_range(std::size_t(0), rows)) {
-//     type_t sum = 0;
-
-//     /// Equivalent to:
-//     /// for (offset_t nz = offset; nz < end; ++nz)
-//     for (auto nz : range(offsets[row], offsets[row + 1])) {
-//       sum += values[nz] * x[indices[nz]];
-//     }
-
-//     // Output
-//     y[row] = sum;
-//   }
-// }
-
 using namespace loops;
-
-template <typename setup_t,
-          typename index_t,
-          typename offset_t,
-          typename type_t>
-__global__ void spmv(setup_t config,
-                     const std::size_t rows,
-                     const std::size_t cols,
-                     const std::size_t nnz,
-                     const offset_t* offsets,
-                     const index_t* indices,
-                     const type_t* values,
-                     const type_t* x,
-                     type_t* y) {
-  /// Equivalent to:
-  /// row = blockIdx.x * blockDim.x + threadIdx.x; (init)
-  /// row < rows; (boundary condition)
-  /// row += gridDim.x * blockDim.x. (step)
-  for (auto row : config.tiles()) {
-    type_t sum = 0;
-
-    /// Equivalent to:
-    /// for (offset_t nz = offset; nz < end; ++nz)
-    for (auto nz : config.atoms(row)) {
-      sum += values[nz] * x[indices[nz]];
-    }
-
-    // Output
-    y[row] = sum;
-  }
-}
 
 template <std::size_t threads_per_block,
           typename index_t,
@@ -84,7 +25,7 @@ __global__ void __launch_bounds__(threads_per_block, 2)
                const type_t* values,
                const type_t* x,
                type_t* y) {
-  using setup_t = schedule::setup<schedule::algroithms_t::tile_mapped,
+  using setup_t = schedule::setup<schedule::algorithms_t::tile_mapped,
                                   threads_per_block, 32, index_t, offset_t>;
 
   /// Allocate temporary storage for the schedule.
@@ -102,10 +43,6 @@ __global__ void __launch_bounds__(threads_per_block, 2)
       continue;
 
     auto row = config.tile_id(virtual_tile, p);
-
-    // XXX: Not sure if this check is needed.
-    // if (row == -1)
-    //   continue;
 
     auto nz_idx = config.atom_id(virtual_atom, row, virtual_tile, p);
     atomicAdd(&(y[row]), values[nz_idx] * x[indices[nz_idx]]);
@@ -135,13 +72,13 @@ int main(int argc, char** argv) {
   constexpr std::size_t block_size = 128;
 
   /// Set-up kernel launch parameters and run the kernel.
-  std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
   /// Traditional kernel launch, this is nice for tile mapped scheduling, which
   /// will allow blocks to be scheduled in and out as needed. And will rely on
   /// NVIDIA's hardware schedule to schedule the blocks efficiently.
+  std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
   launch::non_cooperative(
       stream, tiled_spmv<block_size, index_t, offset_t, type_t>, grid_size,
       block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
