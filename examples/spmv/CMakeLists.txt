@@ -1,24 +1,23 @@
-# begin /* Set the application name. */
-set(APPLICATION_NAME spmv)
-# end /* Set the application name. */
-
-# begin /* Add CUDA executables */
-add_executable(${APPLICATION_NAME})
-
-set(SOURCE_LIST 
-    ${APPLICATION_NAME}.cu
+# begin /* Add application */
+set(SOURCES
+  original.cu  
+  thread_mapped.cu
+  group_mapped.cu
+  work_oriented.cu
 )
 
-target_sources(${APPLICATION_NAME} PRIVATE ${SOURCE_LIST})
-target_link_libraries(${APPLICATION_NAME} 
-    PRIVATE loops
-    # PRIVATE nvToolsExt
+get_target_property(LOOPS_ARCHITECTURES 
+  loops CUDA_ARCHITECTURES
 )
-get_target_property(LOOPS_ARCHITECTURES loops CUDA_ARCHITECTURES)
-set_target_properties(${APPLICATION_NAME} 
+
+foreach(SOURCE IN LISTS SOURCES)
+  get_filename_component(TEST_NAME ${SOURCE} NAME_WLE)
+  add_executable(loops.spmv.${TEST_NAME} ${SOURCE})
+  target_link_libraries(loops.spmv.${TEST_NAME} PRIVATE loops)
+  set_target_properties(loops.spmv.${TEST_NAME} 
     PROPERTIES 
-        CUDA_ARCHITECTURES ${LOOPS_ARCHITECTURES}
-) # XXX: Find a better way to inherit loops properties.
-
-message(STATUS "Example Added: ${APPLICATION_NAME}")
-# end /* Add CUDA executables */
+      CUDA_ARCHITECTURES ${LOOPS_ARCHITECTURES}
+  )
+  message(STATUS "Example Added: loops.spmv.${TEST_NAME}")
+endforeach()
+# end /* Add application */
