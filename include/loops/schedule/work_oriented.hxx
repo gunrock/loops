@@ -161,15 +161,21 @@ class setup<algorithms_t::work_oriented,
         work_per_thread(div(total_work, num_threads)) {}
 
   __device__ __forceinline__ auto init() {
-    thrust::counting_iterator<atoms_t> atoms_indices;
+    thrust::counting_iterator<atoms_t> atoms_indices(0);
 
-    std::size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
-    std::size_t upper = min(work_per_thread * tid, total_work);
-    std::size_t lower = min(upper + work_per_thread, total_work);
+    /// Calculate the diagonals.
+    atom_size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+    atom_size_t upper =
+        min(atom_size_t(work_per_thread * tid), atom_size_t(total_work));
+    atom_size_t lower =
+        min(atom_size_t(upper + work_per_thread), atom_size_t(total_work));
+
+    /// Search across the diagonals to find coordinates to process.
     auto st = search(upper, tile_traits_t::begin() + 1, atoms_indices,
                      tile_traits_t::size(), atom_traits_t::size());
     auto en = search(lower, tile_traits_t::begin() + 1, atoms_indices,
                      tile_traits_t::size(), atom_traits_t::size());
+
     return thrust::make_pair(st, en);
   }
 
@@ -181,17 +187,19 @@ class setup<algorithms_t::work_oriented,
 
   template <typename map_t>
   __device__ __forceinline__ step_range_t<atoms_t> atoms(tiles_t t, map_t& m) {
-    auto num_atoms = tile_traits_t::begin()[(t + 1)];
+    atoms_t nz_next_start = tile_traits_t::begin()[(t + 1)];
     auto nz_start = m.first.second;
-    m.first.second += (num_atoms - nz_start);
-    return custom_stride_range(atoms_t(nz_start), num_atoms, atoms_t(1));
+    m.first.second += (nz_next_start - nz_start);
+    return custom_stride_range(atoms_t(nz_start), nz_next_start, atoms_t(1));
+    // return custom_stride_range(atoms_t(m.first.second), nz_next_start,
+    //  atoms_t(1));
   }
 
   template <typename map_t>
   __device__ __forceinline__ step_range_t<tiles_t> remainder_tiles(
       map_t& m) const {
-    return custom_stride_range(tiles_t(m.second.first), tiles_t(m.second.first),
-                               tiles_t(1));
+    return custom_stride_range(tiles_t(m.second.first),
+                               tiles_t(m.second.first + 1), tiles_t(1));
   }
 
   template <typename map_t>
@@ -212,22 +220,26 @@ class setup<algorithms_t::work_oriented,
    * @param b_len Length of the second iterator.
    * @return A coordinate.
    */
-  template <typename xit_t, typename yit_t>
-  __device__ __forceinline__ auto search(const std::size_t& diagonal,
+  template <typename offset_t, typename xit_t, typename yit_t>
+  __device__ __forceinline__ auto search(const offset_t& diagonal,
                                          const xit_t a,
                                          const yit_t b,
-                                         const tile_size_t& a_len,
-                                         const atom_size_t& b_len) {
-    // Diagonal search range (in x-coordinate space)
-    std::size_t x_min = max((std::size_t)(diagonal - b_len), std::size_t(0));
-    std::size_t x_max = min(diagonal, (std::size_t)a_len);
+                                         const offset_t& a_len,
+                                         const offset_t& b_len) {
+    /// Diagonal search range (in x-coordinate space)
+    /// Note that the subtraction can result into a negative number, in which
+    /// case the max would result as 0. But if we use offset_t here, and it is
+    /// an unsigned type, we would get strange behavior, possible an unwanted
+    /// sign conversion that we do not want.
+    int x_min = max(int(diagonal) - int(b_len), int(0));
+    int x_max = min(int(diagonal), int(a_len));
 
     auto it = thrust::lower_bound(
-        thrust::seq,                                    // Sequential impl
-        thrust::counting_iterator<std::size_t>(x_min),  // Start iterator @x_min
-        thrust::counting_iterator<std::size_t>(x_max),  // End iterator @x_max
-        diagonal,                                       // ...
-        [=] __device__(const std::size_t& idx, const std::size_t& diagonal) {
+        thrust::seq,                                 // Sequential impl
+        thrust::counting_iterator<offset_t>(x_min),  // Start iterator @x_min
+        thrust::counting_iterator<offset_t>(x_max),  // End iterator @x_max
+        diagonal,                                    // ...
+        [=] __device__(const offset_t& idx, const offset_t& diagonal) {
           return a[idx] <= b[diagonal - idx - 1];
         });
 

@@ -26,8 +26,9 @@ __global__ void __launch_bounds__(threads_per_block, 2)
                const type_t* values,
                const type_t* x,
                type_t* y) {
-  using setup_t = schedule::setup<schedule::algorithms_t::work_oriented,
-                                  threads_per_block, 1, index_t, offset_t>;
+  using setup_t =
+      schedule::setup<schedule::algorithms_t::work_oriented, threads_per_block,
+                      1, index_t, offset_t, std::size_t, std::size_t>;
 
   setup_t config(offsets, rows, nnz);
   auto map = config.init();
@@ -42,14 +43,20 @@ __global__ void __launch_bounds__(threads_per_block, 2)
     sum = 0;
   }
 
-  int remainder_row = map.second.first;
-  for (auto nz : config.remainder_atoms(map)) {
-    sum += values[nz] * x[indices[nz]];
-  }
+  // Interesting use of syncthreads to ensure all remaining tiles get processed
+  // at the same time, possibly causing less thread divergence among the threads
+  // in the same warp.
+  __syncthreads();
 
-  /// Accumulate the remainder.
-  if (sum != 0)
-    atomicAdd(&(y[remainder_row]), sum);
+  /// Process remaining tiles.
+  for (auto row : config.remainder_tiles(map)) {
+    for (auto nz : config.remainder_atoms(map)) {
+      sum += values[nz] * x[indices[nz]];
+    }
+    /// Accumulate the remainder.
+    if (sum != 0)
+      atomicAdd(&(y[row]), sum);
+  }
 }
 
 int main(int argc, char** argv) {
@@ -68,9 +75,6 @@ int main(int argc, char** argv) {
   vector_t<type_t> x(csr.rows);
   vector_t<type_t> y(csr.rows);
 
-  std::cout << "# Rows: " << csr.rows << std::endl;
-  std::cout << "# Columns: " << csr.cols << std::endl;
-
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
@@ -81,8 +85,11 @@ int main(int argc, char** argv) {
   cudaStream_t stream;
   cudaStreamCreate(&stream);
 
-  std::size_t grid_size =
-      (((csr.rows + csr.nnzs) + block_size) - 1) / block_size;
+  /// Launch 2 x (SM Count) number of blocks.
+  /// Weirdly enough, a really high number here might cause it to fail.
+  loops::device::properties_t props;
+  std::size_t grid_size = 2 * props.multi_processor_count();
+
   launch::non_cooperative(
       stream, merge_spmv<block_size, index_t, offset_t, type_t>, grid_size,
       block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),

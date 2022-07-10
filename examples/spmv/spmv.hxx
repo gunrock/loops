@@ -20,6 +20,7 @@
 #include <loops/util/filepath.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/equal.hxx>
+#include <loops/util/device.hxx>
 #include <loops/memory.hxx>
 #include <cxxopts.hpp>
 
