@@ -188,11 +188,9 @@ class setup<algorithms_t::work_oriented,
   template <typename map_t>
   __device__ __forceinline__ step_range_t<atoms_t> atoms(tiles_t t, map_t& m) {
     atoms_t nz_next_start = tile_traits_t::begin()[(t + 1)];
-    auto nz_start = m.first.second;
+    atoms_t nz_start = m.first.second;
     m.first.second += (nz_next_start - nz_start);
-    return custom_stride_range(atoms_t(nz_start), nz_next_start, atoms_t(1));
-    // return custom_stride_range(atoms_t(m.first.second), nz_next_start,
-    //  atoms_t(1));
+    return custom_stride_range(nz_start, nz_next_start, atoms_t(1));
   }
 
   template <typename map_t>
