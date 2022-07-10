@@ -9,7 +9,7 @@
  *
  */
 
-#include "spmv.hxx"
+#include "helpers.hxx"
 using namespace loops;
 
 template <typename setup_t,
@@ -43,6 +43,44 @@ __global__ void thread_mapped_spmv(setup_t config,
   }
 }
 
+/**
+ * @brief Sparse-Matrix Vector Multiplication API.
+ *
+ * @tparam index_t Type of column indices.
+ * @tparam offset_t Type of row offsets.
+ * @tparam type_t Type of values.
+ * @param parameters CLI parameters.
+ * @param csr CSR matrix (GPU).
+ * @param x Input vector x (GPU).
+ * @param y Output vector y (GPU).
+ * @param stream CUDA stream.
+ */
+template <typename index_t, typename offset_t, typename type_t>
+void spmv(parameters_t& parameters,
+          csr_t<index_t, offset_t, type_t>& csr,
+          vector_t<type_t>& x,
+          vector_t<type_t>& y,
+          cudaStream_t stream = 0) {
+  // Create a schedule.
+  constexpr std::size_t block_size = 128;
+
+  /// Set-up kernel launch parameters and run the kernel.
+
+  // Create a schedule.
+  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1,
+                                  index_t, offset_t>;
+  setup_t config(csr.offsets.data().get(), csr.rows, csr.nnzs);
+
+  std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
+  launch::non_cooperative(
+      stream, thread_mapped_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
+      block_size, config, csr.rows, csr.cols, csr.nnzs,
+      csr.offsets.data().get(), csr.indices.data().get(),
+      csr.values.data().get(), x.data().get(), y.data().get());
+
+  cudaStreamSynchronize(stream);
+}
+
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
@@ -62,40 +100,10 @@ int main(int argc, char** argv) {
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
-  // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  // Run the benchmark.
+  spmv(parameters, csr, x, y);
 
-  /// Set-up kernel launch parameters and run the kernel.
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
-
-  // Create a schedule.
-  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1,
-                                  index_t, offset_t>;
-  setup_t config(csr.offsets.data().get(), csr.rows, csr.nnzs);
-
-  std::size_t grid_size = (csr.rows + block_size - 1) / block_size;
-  launch::non_cooperative(
-      stream, thread_mapped_spmv<setup_t, index_t, offset_t, type_t>, grid_size,
-      block_size, config, csr.rows, csr.cols, csr.nnzs,
-      csr.offsets.data().get(), csr.indices.data().get(),
-      csr.values.data().get(), x.data().get(), y.data().get());
-
-  cudaStreamSynchronize(stream);
-
-  /// Validation code, can be safely ignored.
-  if (parameters.validate) {
-    auto h_y = cpu::spmv(csr, x);
-
-    std::size_t errors = util::equal(
-        y.data().get(), h_y.data(), csr.rows,
-        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
-        parameters.verbose);
-
-    std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
-              << std::endl;
-    std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
-              << csr.nnzs << ")" << std::endl;
-    std::cout << "Errors:\t\t" << errors << std::endl;
-  }
+  // Validation.
+  if (parameters.validate)
+    cpu::validate(parameters, csr, x, y);
 }

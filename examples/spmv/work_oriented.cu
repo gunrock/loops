@@ -9,23 +9,31 @@
  *
  */
 
-#include "spmv.hxx"
+#include "helpers.hxx"
 
 using namespace loops;
 
+/**
+ * @brief Work oriented SpMV kernel.
+ *
+ * @tparam threads_per_block Number of threads per block.
+ * @tparam index_t Type of column indices.
+ * @tparam offset_t Type of row offsets.
+ * @tparam type_t Type of values.
+ */
 template <std::size_t threads_per_block,
           typename index_t,
           typename offset_t,
           typename type_t>
 __global__ void __launch_bounds__(threads_per_block, 2)
-    merge_spmv(std::size_t rows,
-               std::size_t cols,
-               std::size_t nnz,
-               offset_t* offsets,
-               index_t* indices,
-               const type_t* values,
-               const type_t* x,
-               type_t* y) {
+    work_oriented_spmv(std::size_t rows,
+                       std::size_t cols,
+                       std::size_t nnz,
+                       offset_t* offsets,
+                       index_t* indices,
+                       const type_t* values,
+                       const type_t* x,
+                       type_t* y) {
   using setup_t =
       schedule::setup<schedule::algorithms_t::work_oriented, threads_per_block,
                       1, index_t, offset_t, std::size_t, std::size_t>;
@@ -59,6 +67,43 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   }
 }
 
+/**
+ * @brief Sparse-Matrix Vector Multiplication API.
+ *
+ * @tparam index_t Type of column indices.
+ * @tparam offset_t Type of row offsets.
+ * @tparam type_t Type of values.
+ * @param parameters CLI parameters.
+ * @param csr CSR matrix (GPU).
+ * @param x Input vector x (GPU).
+ * @param y Output vector y (GPU).
+ * @param stream CUDA stream.
+ */
+template <typename index_t, typename offset_t, typename type_t>
+void spmv(parameters_t& parameters,
+          csr_t<index_t, offset_t, type_t>& csr,
+          vector_t<type_t>& x,
+          vector_t<type_t>& y,
+          cudaStream_t stream = 0) {
+  // Create a schedule.
+  constexpr std::size_t block_size = 128;
+
+  /// Set-up kernel launch parameters and run the kernel.
+
+  /// Launch 2 x (SM Count) number of blocks.
+  /// Weirdly enough, a really high number here might cause it to fail.
+  loops::device::properties_t props;
+  std::size_t grid_size = 2 * props.multi_processor_count();
+
+  launch::non_cooperative(
+      stream, work_oriented_spmv<block_size, index_t, offset_t, type_t>,
+      grid_size, block_size, csr.rows, csr.cols, csr.nnzs,
+      csr.offsets.data().get(), csr.indices.data().get(),
+      csr.values.data().get(), x.data().get(), y.data().get());
+
+  cudaStreamSynchronize(stream);
+}
+
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
@@ -78,39 +123,10 @@ int main(int argc, char** argv) {
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
-  // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  // Run the benchmark.
+  spmv(parameters, csr, x, y);
 
-  /// Set-up kernel launch parameters and run the kernel.
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
-
-  /// Launch 2 x (SM Count) number of blocks.
-  /// Weirdly enough, a really high number here might cause it to fail.
-  loops::device::properties_t props;
-  std::size_t grid_size = 2 * props.multi_processor_count();
-
-  launch::non_cooperative(
-      stream, merge_spmv<block_size, index_t, offset_t, type_t>, grid_size,
-      block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
-      csr.indices.data().get(), csr.values.data().get(), x.data().get(),
-      y.data().get());
-
-  cudaStreamSynchronize(stream);
-
-  /// Validation code, can be safely ignored.
-  if (parameters.validate) {
-    auto h_y = cpu::spmv(csr, x);
-
-    std::size_t errors = util::equal(
-        y.data().get(), h_y.data(), csr.rows,
-        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
-        parameters.verbose);
-
-    std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
-              << std::endl;
-    std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
-              << csr.nnzs << ")" << std::endl;
-    std::cout << "Errors:\t\t" << errors << std::endl;
-  }
+  // Validation.
+  if (parameters.validate)
+    cpu::validate(parameters, csr, x, y);
 }
