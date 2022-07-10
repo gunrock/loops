@@ -1,5 +1,5 @@
 /**
- * @file spmv.cu
+ * @file group_mapped.cu
  * @author Muhammad Osama (mosama@ucdavis.edu)
  * @brief Sparse Matrix-Vector Multiplication example.
  * @version 0.1
