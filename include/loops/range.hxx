@@ -1,7 +1,7 @@
 /**
  * @file range.hxx
- * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief https://github.com/harrism/cpp11-range/blob/master/range.hpp
+ * @brief Code is based on Mark Harris' work: 
+ * https://github.com/harrism/cpp11-range/blob/master/range.hpp
  * @version 0.1
  * @date 2022-02-02
  *
@@ -16,13 +16,13 @@
 namespace loops {
 namespace detail {
 
-template <typename T>
-struct range_iter_base : std::iterator<std::input_iterator_tag, T> {
-  __host__ __device__ range_iter_base(T current) : current(current) {}
+template <typename type_t>
+struct range_iter_base : std::iterator<std::input_iterator_tag, type_t> {
+  __host__ __device__ range_iter_base(type_t current) : current(current) {}
 
-  __host__ __device__ T operator*() const { return current; }
+  __host__ __device__ type_t operator*() const { return current; }
 
-  __host__ __device__ T const* operator->() const { return &current; }
+  __host__ __device__ type_t const* operator->() const { return &current; }
 
   __host__ __device__ range_iter_base& operator++() {
     ++current;
@@ -44,23 +44,23 @@ struct range_iter_base : std::iterator<std::input_iterator_tag, T> {
   }
 
  protected:
-  T current;
+  type_t current;
 };
 
 }  // namespace detail
 
-template <typename T>
+template <typename type_t>
 struct range_proxy {
-  struct iter : detail::range_iter_base<T> {
-    __host__ __device__ iter(T current) : detail::range_iter_base<T>(current) {}
+  struct iter : detail::range_iter_base<type_t> {
+    __host__ __device__ iter(type_t current) : detail::range_iter_base<type_t>(current) {}
   };
 
   struct step_range_proxy {
-    struct iter : detail::range_iter_base<T> {
-      __host__ __device__ iter(T current, T step)
-          : detail::range_iter_base<T>(current), step(step) {}
+    struct iter : detail::range_iter_base<type_t> {
+      __host__ __device__ iter(type_t current, type_t step)
+          : detail::range_iter_base<type_t>(current), step(step) {}
 
-      using detail::range_iter_base<T>::current;
+      using detail::range_iter_base<type_t>::current;
 
       __host__ __device__ iter& operator++() {
         current += step;
@@ -83,10 +83,10 @@ struct range_proxy {
       }
 
      private:
-      T step;
+      type_t step;
     };
 
-    __host__ __device__ step_range_proxy(T begin, T end, T step)
+    __host__ __device__ step_range_proxy(type_t begin, type_t end, type_t step)
         : begin_(begin, step), end_(end, step) {}
 
     __host__ __device__ iter begin() const { return begin_; }
@@ -98,9 +98,9 @@ struct range_proxy {
     iter end_;
   };
 
-  __host__ __device__ range_proxy(T begin, T end) : begin_(begin), end_(end) {}
+  __host__ __device__ range_proxy(type_t begin, type_t end) : begin_(begin), end_(end) {}
 
-  __host__ __device__ step_range_proxy step(T step) {
+  __host__ __device__ step_range_proxy step(type_t step) {
     return {*begin_, *end_, step};
   }
 
@@ -113,11 +113,11 @@ struct range_proxy {
   iter end_;
 };
 
-template <typename T>
+template <typename type_t>
 struct infinite_range_proxy {
-  struct iter : detail::range_iter_base<T> {
-    __host__ __device__ iter(T current = T())
-        : detail::range_iter_base<T>(current) {}
+  struct iter : detail::range_iter_base<type_t> {
+    __host__ __device__ iter(type_t current = type_t())
+        : detail::range_iter_base<type_t>(current) {}
 
     __host__ __device__ bool operator==(iter const&) const { return false; }
 
@@ -125,11 +125,11 @@ struct infinite_range_proxy {
   };
 
   struct step_range_proxy {
-    struct iter : detail::range_iter_base<T> {
-      __host__ __device__ iter(T current = T(), T step = T())
-          : detail::range_iter_base<T>(current), step(step) {}
+    struct iter : detail::range_iter_base<type_t> {
+      __host__ __device__ iter(type_t current = type_t(), type_t step = type_t())
+          : detail::range_iter_base<type_t>(current), step(step) {}
 
-      using detail::range_iter_base<T>::current;
+      using detail::range_iter_base<type_t>::current;
 
       __host__ __device__ iter& operator++() {
         current += step;
@@ -147,10 +147,10 @@ struct infinite_range_proxy {
       __host__ __device__ bool operator!=(iter const&) const { return true; }
 
      private:
-      T step;
+      type_t step;
     };
 
-    __host__ __device__ step_range_proxy(T begin, T step)
+    __host__ __device__ step_range_proxy(type_t begin, type_t step)
         : begin_(begin, step) {}
 
     __host__ __device__ iter begin() const { return begin_; }
@@ -161,9 +161,9 @@ struct infinite_range_proxy {
     iter begin_;
   };
 
-  __host__ __device__ infinite_range_proxy(T begin) : begin_(begin) {}
+  __host__ __device__ infinite_range_proxy(type_t begin) : begin_(begin) {}
 
-  __host__ __device__ step_range_proxy step(T step) {
+  __host__ __device__ step_range_proxy step(type_t step) {
     return step_range_proxy(*begin_, step);
   }
 
@@ -175,13 +175,13 @@ struct infinite_range_proxy {
   iter begin_;
 };
 
-template <typename T>
-__host__ __device__ range_proxy<T> range(T begin, T end) {
+template <typename type_t>
+__host__ __device__ range_proxy<type_t> range(type_t begin, type_t end) {
   return {begin, end};
 }
 
-template <typename T>
-__host__ __device__ infinite_range_proxy<T> range(T begin) {
+template <typename type_t>
+__host__ __device__ infinite_range_proxy<type_t> range(type_t begin) {
   return {begin};
 }
 
@@ -189,9 +189,9 @@ namespace traits {
 
 template <typename C>
 struct has_size {
-  template <typename T>
-  static constexpr auto check(T*) ->
-      typename std::is_integral<decltype(std::declval<T const>().size())>::type;
+  template <typename type_t>
+  static constexpr auto check(type_t*) ->
+      typename std::is_integral<decltype(std::declval<type_t const>().size())>::type;
 
   template <typename>
   static constexpr auto check(...) -> std::false_type;
@@ -209,14 +209,14 @@ __host__ __device__ auto indices(C const& cont)
   return {0, cont.size()};
 }
 
-template <typename T, std::size_t N>
-__host__ __device__ range_proxy<std::size_t> indices(T (&)[N]) {
+template <typename type_t, std::size_t N>
+__host__ __device__ range_proxy<std::size_t> indices(type_t (&)[N]) {
   return {0, N};
 }
 
-template <typename T>
-range_proxy<typename std::initializer_list<T>::size_type> __host__ __device__
-indices(std::initializer_list<T>&& cont) {
+template <typename type_t>
+range_proxy<typename std::initializer_list<type_t>::size_type> __host__ __device__
+indices(std::initializer_list<type_t>&& cont) {
   return {0, cont.size()};
 }
 }  // namespace loops
