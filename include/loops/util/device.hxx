@@ -9,6 +9,8 @@
  *
  */
 
+#pragma once
+
 namespace loops {
 namespace device {
 typedef int device_id_t;
