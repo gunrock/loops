@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <loops/grid_stride_range.hxx>
+#include <loops/stride_ranges.hxx>
 
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>

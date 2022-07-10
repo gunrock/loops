@@ -10,7 +10,7 @@
  *
  */
 #include <loops/container/vector.hxx>
-#include <loops/grid_stride_range.hxx>
+#include <loops/stride_ranges.hxx>
 #include <loops/util/generate.hxx>
 
 #include <thrust/copy.h>
