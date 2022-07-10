@@ -32,31 +32,22 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   setup_t config(offsets, rows, nnz);
   auto map = config.init();
 
+  /// Accumulate the complete tiles.
   type_t sum = 0;
   for (auto row : config.tiles(map)) {
-    // printf("row = %d\n", row);
     for (auto nz : config.atoms(row, map)) {
-      // printf("nz = %d\n", nz);
       sum += values[nz] * x[indices[nz]];
     }
     y[row] = sum;
-    // if (row == 0)
-    //   printf("sum = %f\n", sum);
     sum = 0;
   }
 
   int remainder_row = map.second.first;
-  // int remainder_nz = map.second.second - map.first.second;
-  // printf("remainder_row = %d\n", remainder_row);
-  // printf("remainder_nz = %d\n", remainder_nz);
-  // printf("(nz start) map.first.second = %d\n", map.first.second);
-  // printf("(nz end) map.second.second = %d\n", map.second.second);
   for (auto nz : config.remainder_atoms(map)) {
-    // printf("(END) nz = %d\n", nz);
     sum += values[nz] * x[indices[nz]];
   }
-  // if (remainder_row == 0)
-  //   printf("sum = %f\n", sum);
+
+  /// Accumulate the remainder.
   if (sum != 0)
     atomicAdd(&(y[remainder_row]), sum);
 }
