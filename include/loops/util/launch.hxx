@@ -1,3 +1,14 @@
+/**
+ * @file launch.hxx
+ * @author Muhammad Osama (mosama@ucdavis.edu)
+ * @brief Kernel launch C++ related functions.
+ * @version 0.1
+ * @date 2022-07-10
+ *
+ * @copyright Copyright (c) 2022
+ *
+ */
+
 #pragma once
 #include <cstddef>
 #include <cuda.h>

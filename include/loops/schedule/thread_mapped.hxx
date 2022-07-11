@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <loops/grid_stride_range.hxx>
+#include <loops/stride_ranges.hxx>
 #include <loops/schedule.hxx>
 
 namespace loops {

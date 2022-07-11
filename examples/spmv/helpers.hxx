@@ -1,5 +1,5 @@
 /**
- * @file spmv.hxx
+ * @file helpers.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
  * @brief Header file for SpMV.
  * @version 0.1
@@ -40,9 +40,9 @@ struct parameters_t {
    * @param argv Command line arguments.
    */
   parameters_t(int argc, char** argv)
-      : options(argv[0], "Sparse Matrix-Vector Multiplication example") {
+      : options(argv[0], "Sparse Matrix-Vector Multiplication") {
     // Add command line options
-    options.add_options()("help", "Print help")                     // help
+    options.add_options()("h,help", "Print help")                   // help
         ("m,market", "Matrix file", cxxopts::value<std::string>())  // mtx
         ("validate", "CPU validation")                              // validate
         ("v,verbose", "Verbose output");                            // verbose
@@ -83,6 +83,7 @@ struct parameters_t {
 
 namespace cpu {
 
+using namespace loops;
 using namespace loops::memory;
 
 /**
@@ -96,7 +97,7 @@ using namespace loops::memory;
  * @return loops::vector_t<type_t, memory_space_t::host> device output vector.
  */
 template <typename index_t, typename offset_t, typename type_t>
-loops::vector_t<type_t, memory_space_t::host> spmv(
+loops::vector_t<type_t, memory_space_t::host> reference(
     loops::csr_t<index_t, offset_t, type_t, memory_space_t::device>& csr,
     loops::vector_t<type_t, memory_space_t::device>& x) {
   // Copy data to CPU.
@@ -114,4 +115,36 @@ loops::vector_t<type_t, memory_space_t::host> spmv(
 
   return y_h;
 }
+
+/**
+ * @brief Validation for SpMV.
+ *
+ * @tparam index_t Column indices type.
+ * @tparam offset_t Row offset type.
+ * @tparam type_t Value type.
+ * @param parameters Parameters.
+ * @param csr CSR matrix.
+ * @param x Input vector.
+ * @param y Output vector.
+ */
+template <typename index_t, typename offset_t, typename type_t>
+void validate(parameters_t& parameters,
+              csr_t<index_t, offset_t, type_t>& csr,
+              vector_t<type_t>& x,
+              vector_t<type_t>& y) {
+  // Validation code, can be safely ignored.
+  auto h_y = reference(csr, x);
+
+  std::size_t errors = util::equal(
+      y.data().get(), h_y.data(), csr.rows,
+      [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
+      parameters.verbose);
+
+  std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
+            << std::endl;
+  std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
+            << csr.nnzs << ")" << std::endl;
+  std::cout << "Errors:\t\t" << errors << std::endl;
+}
+
 }  // namespace cpu
