@@ -1,5 +1,5 @@
 /**
- * @file spmv.cu
+ * @file group_mapped.cu
  * @author Muhammad Osama (mosama@ucdavis.edu)
  * @brief Sparse Matrix-Vector Multiplication example.
  * @version 0.1
@@ -9,7 +9,7 @@
  *
  */
 
-#include "spmv.hxx"
+#include "helpers.hxx"
 using namespace loops;
 
 template <std::size_t threads_per_block,
@@ -49,31 +49,28 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   }
 }
 
-int main(int argc, char** argv) {
-  using index_t = int;
-  using offset_t = int;
-  using type_t = float;
-
-  // ... I/O parameters, mtx, etc.
-  parameters_t parameters(argc, argv);
-
-  csr_t<index_t, offset_t, type_t> csr;
-  matrix_market_t<index_t, offset_t, type_t> mtx;
-  csr.from_coo(mtx.load(parameters.filename));
-
-  // Input and output vectors.
-  vector_t<type_t> x(csr.rows);
-  vector_t<type_t> y(csr.rows);
-
-  // Generate random numbers between [0, 1].
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
-
+/**
+ * @brief Sparse-Matrix Vector Multiplication API.
+ *
+ * @tparam index_t Type of column indices.
+ * @tparam offset_t Type of row offsets.
+ * @tparam type_t Type of values.
+ * @param parameters CLI parameters.
+ * @param csr CSR matrix (GPU).
+ * @param x Input vector x (GPU).
+ * @param y Output vector y (GPU).
+ * @param stream CUDA stream.
+ */
+template <typename index_t, typename offset_t, typename type_t>
+void spmv(parameters_t& parameters,
+          csr_t<index_t, offset_t, type_t>& csr,
+          vector_t<type_t>& x,
+          vector_t<type_t>& y,
+          cudaStream_t stream = 0) {
   // Create a schedule.
   constexpr std::size_t block_size = 128;
 
   /// Set-up kernel launch parameters and run the kernel.
-  cudaStream_t stream;
-  cudaStreamCreate(&stream);
 
   /// Traditional kernel launch, this is nice for tile mapped scheduling, which
   /// will allow blocks to be scheduled in and out as needed. And will rely on
@@ -97,20 +94,31 @@ int main(int argc, char** argv) {
   //                     y.data().get());
 
   cudaStreamSynchronize(stream);
+}
 
-  /// Validation code, can be safely ignored.
-  if (parameters.validate) {
-    auto h_y = cpu::spmv(csr, x);
+int main(int argc, char** argv) {
+  using index_t = int;
+  using offset_t = int;
+  using type_t = float;
 
-    std::size_t errors = util::equal(
-        y.data().get(), h_y.data(), csr.rows,
-        [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
-        parameters.verbose);
+  // ... I/O parameters, mtx, etc.
+  parameters_t parameters(argc, argv);
 
-    std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
-              << std::endl;
-    std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
-              << csr.nnzs << ")" << std::endl;
-    std::cout << "Errors:\t\t" << errors << std::endl;
-  }
+  csr_t<index_t, offset_t, type_t> csr;
+  matrix_market_t<index_t, offset_t, type_t> mtx;
+  csr.from_coo(mtx.load(parameters.filename));
+
+  // Input and output vectors.
+  vector_t<type_t> x(csr.rows);
+  vector_t<type_t> y(csr.rows);
+
+  // Generate random numbers between [0, 1].
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+
+  // Run the benchmark.
+  spmv(parameters, csr, x, y);
+
+  // Validation.
+  if (parameters.validate)
+    cpu::validate(parameters, csr, x, y);
 }
