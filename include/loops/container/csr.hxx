@@ -30,11 +30,6 @@ struct csr_t {
   vector_t<index_t, space> indices;   // Aj
   vector_t<value_t, space> values;    // Ax
 
-  // Vectors for conversions.
-  vector_t<offset_t, memory_space_t::host> Ap;
-  vector_t<index_t, memory_space_t::host> Aj;
-  vector_t<value_t, memory_space_t::host> Ax;
-
   csr_t() : rows(0), cols(0), nnzs(0), offsets(), indices(), values() {}
 
   csr_t(std::size_t r, std::size_t c, std::size_t nnz)
@@ -76,21 +71,10 @@ struct csr_t {
     cols = coo.cols;
     nnzs = coo.nnzs;
 
-    if (space == memory_space_t::device) {
-      assert(space == memory_space_t::device);
-      // If returning csr_t on device, allocate temporary host vectors, build on
-      // host and move to device.
-      Ap.resize(rows + 1);
-      Aj.resize(nnzs);
-      Ax.resize(nnzs);
-
-    } else {
-      assert(space == memory_space_t::host);
-      // If returning csr_t on host, use it's internal memory to build from COO.
-      offsets.resize(rows + 1);
-      indices.resize(nnzs);
-      values.resize(nnzs);
-    }
+    // Vectors for conversions.
+    vector_t<offset_t, memory_space_t::host> Ap(rows + 1);
+    vector_t<index_t, memory_space_t::host> Aj(nnzs);
+    vector_t<value_t, memory_space_t::host> Ax(nnzs);
 
     // compute number of non-zero entries per row of A.
     for (std::size_t n = 0; n < nnzs; ++n) {
@@ -124,11 +108,9 @@ struct csr_t {
     }
 
     // If returning a device csr_t, move coverted data to device.
-    if (space == memory_space_t::device) {
-      offsets = Ap;
-      indices = Aj;
-      values = Ax;
-    }
+    offsets = Ap;
+    indices = Aj;
+    values = Ax;
 
     return *this;  // CSR representation (with possible duplicates)
   }
