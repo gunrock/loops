@@ -26,16 +26,9 @@ void work_oriented_bench(nvbench::state& state) {
   using offset_t = int;
   using type_t = float;
 
-  // state.collect_dram_throughput();
-  // state.collect_l1_hit_rates();
-  // state.collect_l2_hit_rates();
-  // state.collect_loads_efficiency();
-  // state.collect_stores_efficiency();
-
   csr_t<index_t, offset_t, type_t> csr;
   matrix_market_t<index_t, offset_t, type_t> mtx;
-  auto coo = mtx.load(filename);
-  csr.from_coo(coo);
+  csr.from_coo(mtx.load(filename));
 
   vector_t<type_t> x(csr.rows);
   vector_t<type_t> y(csr.rows);
@@ -44,6 +37,12 @@ void work_oriented_bench(nvbench::state& state) {
 
   // --
   // Run SPMV with NVBench
+  state.collect_dram_throughput();
+  state.collect_l1_hit_rates();
+  state.collect_l2_hit_rates();
+  state.collect_loads_efficiency();
+  state.collect_stores_efficiency();
+
   state.exec(nvbench::exec_tag::sync, [&](nvbench::launch& launch) {
     algorithms::spmv::work_oriented(csr, x, y);
   });
@@ -55,7 +54,7 @@ int main(int argc, char** argv) {
 
   if (params.help) {
     // Print NVBench help.
-    const char* args[1] = {"-h"};
+    char* args[1] = {"-h"};
     NVBENCH_MAIN_BODY(1, args);
   } else {
     // Create a new argument array without matrix filename to pass to NVBench.
