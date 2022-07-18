@@ -30,6 +30,11 @@ struct csr_t {
   vector_t<index_t, space> indices;   // Aj
   vector_t<value_t, space> values;    // Ax
 
+  // Vectors for conversions.
+  vector_t<offset_t, memory_space_t::host> Ap;
+  vector_t<index_t, memory_space_t::host> Aj;
+  vector_t<value_t, memory_space_t::host> Ax;
+
   csr_t() : rows(0), cols(0), nnzs(0), offsets(), indices(), values() {}
 
   csr_t(std::size_t r, std::size_t c, std::size_t nnz)
@@ -70,11 +75,6 @@ struct csr_t {
     rows = coo.rows;
     cols = coo.cols;
     nnzs = coo.nnzs;
-
-    // Allocate space for vectors
-    vector_t<offset_t, memory_space_t::host> Ap;
-    vector_t<index_t, memory_space_t::host> Aj;
-    vector_t<value_t, memory_space_t::host> Ax;
 
     if (space == memory_space_t::device) {
       assert(space == memory_space_t::device);
