@@ -124,7 +124,12 @@ int main(int argc, char** argv) {
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
   // Run the benchmark.
+  util::timer_t timer;
+  timer.start();
   spmv(parameters, csr, x, y);
+  timer.stop();
+
+  std::cout << "Elapsed (ms):\t" << timer.milliseconds() << std::endl;
 
   // Validation.
   if (parameters.validate)
