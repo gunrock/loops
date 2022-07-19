@@ -21,10 +21,8 @@ int main(int argc, char** argv) {
 
   // ... I/O parameters, mtx, etc.
   parameters_t parameters(argc, argv);
-
-  csr_t<index_t, offset_t, type_t> csr;
   matrix_market_t<index_t, offset_t, type_t> mtx;
-  csr.from_coo(mtx.load(parameters.filename));
+  csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
 
   // Input and output vectors.
   vector_t<type_t> x(csr.rows);
