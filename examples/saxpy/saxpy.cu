@@ -36,8 +36,8 @@ int main() {
   loops::vector_t<type_t> y(N);
 
   // Generate random numbers between [0, 1].
-  loops::generate::random::uniform_distribution(x.begin(), x.end());
-  loops::generate::random::uniform_distribution(y.begin(), y.end());
+  loops::generate::random::uniform_distribution(x.begin(), x.end(), 0, 1);
+  loops::generate::random::uniform_distribution(y.begin(), y.end(), 0, 1);
 
   // Launch kernel with a given configuration.
   constexpr std::size_t threads_per_block = 256;
