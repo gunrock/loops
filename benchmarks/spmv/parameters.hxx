@@ -17,8 +17,6 @@
 
 #include <loops/util/filepath.hxx>
 
-std::string filename;
-
 struct parameters_t {
   std::string filename;
   bool help = false;

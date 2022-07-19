@@ -35,8 +35,21 @@ struct coo_t {
         col_indices(nnz),
         values(nnz) {}
 
-  ~coo_t() {}
+  coo_t(const coo_t<index_t, value_t, memory_space_t::device>& rhs)
+      : rows(rhs.rows),
+        cols(rhs.cols),
+        nnzs(rhs.nnzs),
+        row_indices(rhs.row_indices),
+        col_indices(rhs.col_indices),
+        values(rhs.values) {}
 
+  coo_t(const coo_t<index_t, value_t, memory_space_t::host>& rhs)
+      : rows(rhs.rows),
+        cols(rhs.cols),
+        nnzs(rhs.nnzs),
+        row_indices(rhs.row_indices),
+        col_indices(rhs.col_indices),
+        values(rhs.values) {}
 };  // struct coo_t
 
 }  // namespace loops
