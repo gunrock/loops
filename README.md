@@ -44,7 +44,18 @@ The silver lining here is that there are more intelligent workload mappings that
 
 The simple idea behind our load-balancing abstraction is to represent sparse formats as atoms, tiles and set functional abstraction elements described in the "Function and Set Notation" below. Once represented as such, we can develop load-balancing algorithms that create balanced ranges of atoms and tiles and map them to processor ids. This information can be abstracted to the user with a simple API (such as ranged-for-loops) to capture user-defined computations. Some benefits of this approach are: (1) the user-defined computation remains largely the same for many different static or dynamic load-balancing schedules, (2) these schedules can now be extended to other computations and (3) dramatically reduces code complexity.
 
-![image](https://user-images.githubusercontent.com/9790745/168728352-27758e82-5f37-46cd-8052-99ca571edbfa.png)
+## As function and set notation.
+
+Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: 
+
+```math
+M = \{ P_{id}, T_i ... T_j \}, \text{map of processor ids to tiles} 
+```
+```math
+L(S) = \{ M_0, ..., M_m\} \text{scheduler responsible for creating the maps}
+```
+
+## As three domains: data, schedule and computation.
 ![illustration](https://user-images.githubusercontent.com/9790745/168728299-6b125b44-894a-49bb-92fd-ee85aaa80ae4.png)
 
 We provide two APIs for our library, one that focuses on a beginner-friendly approach to load-balancing irregular sparse computations and another that allows advanced programmers to retain control of the GPU kernels and express load-balanced execution as ranged loops. Both approaches are highlighted below.
