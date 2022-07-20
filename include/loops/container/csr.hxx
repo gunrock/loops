@@ -2,6 +2,7 @@
 
 #include <loops/container/vector.hxx>
 #include <loops/container/formats.hxx>
+#include <loops/container/detail/convert.hxx>
 #include <loops/memory.hxx>
 
 #include <thrust/transform.h>
@@ -13,9 +14,9 @@ using namespace memory;
 /**
  * @brief Compressed Sparse Row (CSR) format.
  *
- * @tparam index_t
- * @tparam offset_t
- * @tparam value_t
+ * @tparam index_t Type of the nonzero elements indices.
+ * @tparam offset_t Type of the row offsets.
+ * @tparam value_t Type of the nonzero elements values.
  */
 template <typename index_t,
           typename offset_t,
@@ -26,13 +27,24 @@ struct csr_t {
   std::size_t cols;
   std::size_t nnzs;
 
-  vector_t<offset_t, space> offsets;  // Ap
-  vector_t<index_t, space> indices;   // Aj
-  vector_t<value_t, space> values;    // Ax
+  vector_t<offset_t, space> offsets;  /// Ap
+  vector_t<index_t, space> indices;   /// Aj
+  vector_t<value_t, space> values;    /// Ax
 
+  /**
+   * @brief Construct a new csr object with everything initialized to zero.
+   *
+   */
   csr_t() : rows(0), cols(0), nnzs(0), offsets(), indices(), values() {}
 
-  csr_t(std::size_t r, std::size_t c, std::size_t nnz)
+  /**
+   * @brief Construct a new csr object with the given dimensions.
+   *
+   * @param r Number of rows.
+   * @param c Number of columns.
+   * @param nnz Number of non-zero elements.
+   */
+  csr_t(const std::size_t& r, const std::size_t& c, const std::size_t& nnz)
       : rows(r),
         cols(c),
         nnzs(nnz),
@@ -40,14 +52,12 @@ struct csr_t {
         indices(nnz),
         values(nnz) {}
 
-  ~csr_t() {}
-
   /**
-   * @brief Copy constructor.
-   * @param rhs
+   * @brief Construct a new csr from another csr object on device.
+   *
+   * @param rhs csr_t<index_t, offset_t, value_t, memory_space_t::device>
    */
-  template <typename _csr_t>
-  csr_t(const _csr_t& rhs)
+  csr_t(const csr_t<index_t, offset_t, value_t, memory_space_t::device>& rhs)
       : rows(rhs.rows),
         cols(rhs.cols),
         nnzs(rhs.nnzs),
@@ -56,162 +66,55 @@ struct csr_t {
         values(rhs.values) {}
 
   /**
-   * @brief Convert a Coordinate Sparse Format into Compressed Sparse Row
-   * Format.
+   * @brief Construct a new csr from another csr object on host.
    *
-   * @tparam index_t
-   * @tparam offset_t
-   * @tparam value_t
-   * @param coo
-   * @return csr_t<space, index_t, offset_t, value_t>&
+   * @param rhs csr_t<index_t, offset_t, value_t, memory_space_t::host>
    */
-  csr_t<index_t, offset_t, value_t, space> from_coo(
-      const coo_t<index_t, value_t, memory_space_t::host>& coo) {
-    rows = coo.rows;
-    cols = coo.cols;
-    nnzs = coo.nnzs;
+  csr_t(const csr_t<index_t, offset_t, value_t, memory_space_t::host>& rhs)
+      : rows(rhs.rows),
+        cols(rhs.cols),
+        nnzs(rhs.nnzs),
+        offsets(rhs.offsets),
+        indices(rhs.indices),
+        values(rhs.values) {}
 
-    // Allocate space for vectors
-    vector_t<offset_t, memory_space_t::host> Ap;
-    vector_t<index_t, memory_space_t::host> Aj;
-    vector_t<value_t, memory_space_t::host> Ax;
-
-    if (space == memory_space_t::device) {
-      assert(space == memory_space_t::device);
-      // If returning csr_t on device, allocate temporary host vectors, build on
-      // host and move to device.
-      Ap.resize(rows + 1);
-      Aj.resize(nnzs);
-      Ax.resize(nnzs);
-
-    } else {
-      assert(space == memory_space_t::host);
-      // If returning csr_t on host, use it's internal memory to build from COO.
-      offsets.resize(rows + 1);
-      indices.resize(nnzs);
-      values.resize(nnzs);
-    }
-
-    // compute number of non-zero entries per row of A.
-    for (std::size_t n = 0; n < nnzs; ++n) {
-      ++Ap[coo.row_indices[n]];
-    }
-
-    // cumulative sum the nnz per row to get offsets[].
-    for (std::size_t i = 0, sum = 0; i < rows; ++i) {
-      index_t temp = Ap[i];
-      Ap[i] = sum;
-      sum += temp;
-    }
-    Ap[rows] = nnzs;
-
-    // write coordinate column indices and nonzero values into CSR's
-    // column indices and nonzero values.
-    for (std::size_t n = 0; n < nnzs; ++n) {
-      index_t row = coo.row_indices[n];
-      index_t dest = Ap[row];
-
-      Aj[dest] = coo.col_indices[n];
-      Ax[dest] = coo.values[n];
-
-      ++Ap[row];
-    }
-
-    for (std::size_t i = 0, last = 0; i <= rows; ++i) {
-      index_t temp = Ap[i];
-      Ap[i] = last;
-      last = temp;
-    }
-
-    // If returning a device csr_t, move coverted data to device.
-    if (space == memory_space_t::device) {
-      offsets = Ap;
-      indices = Aj;
-      values = Ax;
-    }
-
-    return *this;  // CSR representation (with possible duplicates)
+  /**
+   * @brief Construct a new csr object from coordinate format (COO).
+   *
+   * @param coo coo_t<index_t, value_t, memory_space_t::host>
+   */
+  csr_t(const coo_t<index_t, value_t, memory_space_t::host>& coo)
+      : rows(coo.rows),
+        cols(coo.cols),
+        nnzs(coo.nnzs),
+        indices(coo.col_indices),
+        values(coo.values) {
+    offsets.resize(coo.rows + 1);
+    /// TODO: Do not need this copy for all cases.
+    vector_t<index_t, space> _row_indices = coo.row_indices;
+    detail::indices_to_offsets<space>(_row_indices.data().get(),
+                                      _row_indices.size(), offsets.data().get(),
+                                      offsets.size());
   }
 
-  void read_binary(std::string filename) {
-    FILE* file = fopen(filename.c_str(), "rb");
-
-    // Read metadata
-    assert(fread(&rows, sizeof(std::size_t), 1, file) != 0);
-    assert(fread(&cols, sizeof(std::size_t), 1, file) != 0);
-    assert(fread(&nnzs, sizeof(std::size_t), 1, file) != 0);
-
-    offsets.resize(rows + 1);
-    indices.resize(nnzs);
-    values.resize(nnzs);
-
-    if (space == memory_space_t::device) {
-      assert(space == memory_space_t::device);
-
-      thrust::host_vector<offset_t> h_offsets(rows + 1);
-      thrust::host_vector<index_t> h_indices(nnzs);
-      thrust::host_vector<value_t> h_values(nnzs);
-
-      assert(fread(memory::raw_pointer_cast(h_offsets.data()), sizeof(offset_t),
-                   rows + 1, file) != 0);
-      assert(fread(memory::raw_pointer_cast(h_indices.data()), sizeof(index_t),
-                   nnzs, file) != 0);
-      assert(fread(memory::raw_pointer_cast(h_values.data()), sizeof(value_t),
-                   nnzs, file) != 0);
-
-      // Copy data from host to device
-      offsets = h_offsets;
-      indices = h_indices;
-      values = h_values;
-
-    } else {
-      assert(space == memory_space_t::host);
-
-      assert(fread(memory::raw_pointer_cast(offsets.data()), sizeof(offset_t),
-                   rows + 1, file) != 0);
-      assert(fread(memory::raw_pointer_cast(indices.data()), sizeof(index_t),
-                   nnzs, file) != 0);
-      assert(fread(memory::raw_pointer_cast(values.data()), sizeof(value_t),
-                   nnzs, file) != 0);
-    }
+  /**
+   * @brief Construct a new csr object from coordinate format (COO).
+   *
+   * @param coo coo_t<index_t, value_t, memory_space_t::device>
+   */
+  csr_t(const coo_t<index_t, value_t, memory_space_t::device>& coo)
+      : rows(coo.rows),
+        cols(coo.cols),
+        nnzs(coo.nnzs),
+        indices(coo.col_indices),
+        values(coo.values) {
+    offsets.resize(coo.rows + 1);
+    /// TODO: Do not need this copy for all cases.
+    vector_t<index_t, space> _row_indices = coo.row_indices;
+    detail::indices_to_offsets<space>(_row_indices.data().get(),
+                                      _row_indices.size(), offsets.data().get(),
+                                      offsets.size());
   }
-
-  void write_binary(std::string filename) {
-    FILE* file = fopen(filename.c_str(), "wb");
-
-    // Write metadata
-    fwrite(&rows, sizeof(std::size_t), 1, file);
-    fwrite(&cols, sizeof(std::size_t), 1, file);
-    fwrite(&nnzs, sizeof(std::size_t), 1, file);
-
-    // Write data
-    if (space == memory_space_t::device) {
-      assert(space == memory_space_t::device);
-
-      thrust::host_vector<offset_t> h_offsets(offsets);
-      thrust::host_vector<index_t> h_indices(indices);
-      thrust::host_vector<value_t> h_values(values);
-
-      fwrite(memory::raw_pointer_cast(h_offsets.data()), sizeof(offset_t),
-             rows + 1, file);
-      fwrite(memory::raw_pointer_cast(h_indices.data()), sizeof(index_t), nnzs,
-             file);
-      fwrite(memory::raw_pointer_cast(h_values.data()), sizeof(value_t), nnzs,
-             file);
-    } else {
-      assert(space == memory_space_t::host);
-
-      fwrite(memory::raw_pointer_cast(offsets.data()), sizeof(offset_t),
-             rows + 1, file);
-      fwrite(memory::raw_pointer_cast(indices.data()), sizeof(index_t), nnzs,
-             file);
-      fwrite(memory::raw_pointer_cast(values.data()), sizeof(value_t), nnzs,
-             file);
-    }
-
-    fclose(file);
-  }
-
 };  // struct csr_t
 
 }  // namespace loops

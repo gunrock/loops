@@ -79,22 +79,16 @@ set_target_properties(loops
     # CUDA_PTX_COMPILATION ON # Can only be applied to OBJ.
 )
 
-# Use for later.
-get_target_property(LOOPS_ARCHITECTURES 
-  loops 
-    CUDA_ARCHITECTURES
-)
-
 ####################################################
 ############ TARGET COMPILER DEFINITIONS ###########
 ####################################################
 target_compile_definitions(loops
   INTERFACE 
-    SM_TARGET=${LOOPS_ARCHITECTURES}
+    SM_TARGET=${CMAKE_CUDA_ARCHITECTURES}
     LOOPS_VERSION=${LOOPS_VERSION}
 )
 
-message(STATUS "Loops CUDA Architecture: ${LOOPS_ARCHITECTURES}")
+message(STATUS "Loops CUDA Architecture: ${CMAKE_CUDA_ARCHITECTURES}")
 
 ####################################################
 ############ TARGET COMPILE FEATURES ###############
@@ -204,7 +198,7 @@ endif(LOOPS_BUILD_TESTS)
 ####################################################
 option(LOOPS_BUILD_BENCHMARKS
   "If on, builds loops with benchmarking support."
-  OFF)
+  ON)
 
 # Subdirectories for examples, testing and documentation
 if(LOOPS_BUILD_BENCHMARKS)
