@@ -11,16 +11,14 @@
 
 #pragma once
 
-#include <loops/schedule.hxx>
-
 #include <loops/util/generate.hxx>
 #include <loops/container/formats.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/container/market.hxx>
 #include <loops/util/filepath.hxx>
-#include <loops/util/launch.hxx>
 #include <loops/util/equal.hxx>
 #include <loops/util/device.hxx>
+#include <loops/util/timer.hxx>
 #include <loops/memory.hxx>
 #include <cxxopts.hpp>
 

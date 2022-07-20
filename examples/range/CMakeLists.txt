@@ -14,10 +14,10 @@ target_link_libraries(${APPLICATION_NAME}
     PRIVATE loops
     # PRIVATE nvToolsExt
 )
-get_target_property(LOOPS_ARCHITECTURES loops CUDA_ARCHITECTURES)
+
 set_target_properties(${APPLICATION_NAME} 
     PROPERTIES 
-        CUDA_ARCHITECTURES ${LOOPS_ARCHITECTURES}
+        CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES}
 ) # XXX: Find a better way to inherit loops properties.
 
 message(STATUS "Example Added: ${APPLICATION_NAME}")
