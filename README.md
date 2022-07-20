@@ -7,19 +7,21 @@ With our open-source framework, we hope to not only improve programmers' product
 
 ## Table of contents
 
-- [GitHub actions status.]()
-- [Background information.]()
-- [Where this project fits in and how?]()
-- [Load-balancing problem and a solution.]()
-- [GPU load-balancing abstraction.]()
-  - [Composable API: Load-balanced loops.]()
-    - Define and configure load-balancing schedule.
-    - Load-balanced ranged loops.
-    - User-defined computation.
-  - [Beginner API: Load-balanced transformations and primitives.]() (🚧)
-    - Defining a sparse layout.
-    - User-defined compute using an extended C++ lambda.
-    - Load-balanced primitive (e.g. transform segmented reduce).
+- [GitHub actions status.](#wrenchgithub-actions-status)
+- [Background information.](#musical_note-a-little-background)
+  - [Where this project fits in and how?](#-a-small-and-important-piece-of-a-larger-puzzle)
+  - [Load-balancing problem and a solution.](#%EF%B8%8F-load-balancing-problem-and-a-silver-lining)
+- [GPU load-balancing abstraction.](#%EF%B8%8F-gpu-load-balancing-abstraction)
+  - [As function and set notation.](#%EF%B8%8F-as-function-and-set-notation)
+  - [As three domains: data, schedule and computation.](#-as-three-domains-data-schedule-and-computation)
+- [Composable API: Load-balanced loops.](#composable-api-load-balanced-loops)
+  - Define and configure load-balancing schedule.
+  - Load-balanced ranged loops.
+  - User-defined computation.
+- [Beginner API: Load-balanced transformations and primitives.](#beginner-api-load-balanced-transformations-and-primitives) (🚧)
+  - Defining a sparse layout.
+  - User-defined compute using an extended C++ lambda.
+  - Load-balanced primitive (e.g. transform segmented reduce).
 
 ## :wrench:	GitHub actions status.
 
@@ -98,7 +100,7 @@ lb::transform_segreduce<lb::work_oriented>
                         0.0f, stream);
 ```
 
-| Advantage                                                                       | Disadvantages                                                                                                           |
+| Advantages                                                                      | Disadvantages                                                                                                           |
 |---------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
 | Requires no knowledge of how to implement segmented reduction.                  | No control over kernel execution and dispatch configuration.                                                            |
 | Very simple API if the computation can be defined using C++ lambda expressions. | No composability; cannot implement more complicated computations that may have cooperative properties among processors. |
