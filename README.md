@@ -21,14 +21,14 @@ With our open-source framework, we hope to not only improve programmers' product
     - User-defined compute using an extended C++ lambda.
     - Load-balanced primitive (e.g. transform segmented reduce).
 
-## GitHub actions status.
+## :wrench:	GitHub actions status.
 
 | System  | Version                                                                                                                                                    | CUDA   | Status                                                                                                                                                   |
 |---------|------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Ubuntu  | [Ubuntu 20.04](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources)        | 11.7.0 | [![Ubuntu](https://github.com/neoblizz/loops/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/neoblizz/loops/actions/workflows/ubuntu.yml)    |
 | Windows | [Windows Server 2019](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources) | 11.7.0 | [![Windows](https://github.com/neoblizz/loops/actions/workflows/windows.yml/badge.svg)](https://github.com/neoblizz/loops/actions/workflows/windows.yml) |
 
-## :musical_note: A little background.
+# :musical_note: A little background.
 **DARPA** announced [**Software Defined Hardware (SDH)**](https://www.darpa.mil/program/software-defined-hardware), a program that aims "*to build runtime-reconfigurable hardware and software that enables near ASIC performance without sacrificing programmability for data-intensive algorithms.*" **NVIDIA** leading the charge on the program, internally called, [**Symphony**](https://blogs.nvidia.com/blog/2018/07/24/darpa-research-post-moores-law/). Our work is a small but important piece of this larger puzzle. The "data-intensive algorithms" part of the program includes domains like Machine Learning, Graph Processing, Sparse-Matrix-Vector algorithms, etc. where there is a large amount of data available to be processed. And the problems being addressed are either already based on irregular data structures and workloads, or are trending towards it (such as sparse machine learning problems). For these irregular workload computations to be successful, we require efficient load-balancing schemes targetting specialized hardware such as the GPUs or Symphony.
 - [DARPA Selects Teams to Unleash Power of Specialized, Reconfigurable Computing Hardware](https://www.darpa.mil/news-events/2018-07-24a)
 
@@ -40,11 +40,11 @@ Today's GPUs follow a Single Instruction Multiple Data (SIMD) model, where diffe
 
 The silver lining here is that there are more intelligent workload mappings that address this problem the load imbalance problem for various types of graphs and other irregular workloads. We extend these previously tightly-coupled scheduling algorithms to an abstraction.
 
-# GPU load-balancing abstraction.
+# ♻️ GPU load-balancing abstraction.
 
 The simple idea behind our load-balancing abstraction is to represent sparse formats as atoms, tiles and set functional abstraction elements described in the "Function and Set Notation" below. Once represented as such, we can develop load-balancing algorithms that create balanced ranges of atoms and tiles and map them to processor ids. This information can be abstracted to the user with a simple API (such as ranged-for-loops) to capture user-defined computations. Some benefits of this approach are: (1) the user-defined computation remains largely the same for many different static or dynamic load-balancing schedules, (2) these schedules can now be extended to other computations and (3) dramatically reduces code complexity.
 
-## As function and set notation.
+## ✒️ As function and set notation.
 
 Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: 
 
@@ -52,17 +52,17 @@ Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_
 M = \{ P_{id}, T_i ... T_j \}, \text{map of processor ids to tiles} 
 ```
 ```math
-L(S) = \{ M_0, ..., M_m\} \text{scheduler responsible for creating the maps}
+L(S) = \{ M_0, ..., M_m\}, \text{scheduler responsible for creating the maps}
 ```
 
-## As three domains: data, schedule and computation.
+## 🧫 As three domains: data, schedule and computation.
 ![illustration](https://user-images.githubusercontent.com/9790745/168728299-6b125b44-894a-49bb-92fd-ee85aaa80ae4.png)
 
 We provide two APIs for our library, one that focuses on a beginner-friendly approach to load-balancing irregular sparse computations and another that allows advanced programmers to retain control of the GPU kernels and express load-balanced execution as ranged loops. Both approaches are highlighted below.
 
-- 🚧 Beginner APIs are heavily in development as they require segmented primitives to be implemented using the composable APIs. If you're interested in a primitive please file an issue. The main contribution of our abstraction focuses on the composable APIs, which we believe to be a more scalable and performant solution.
-
 ## Beginner API: Load-balanced transformations and primitives.
+
+> 🚧 Beginner APIs are heavily in development as they require segmented primitives to be implemented using the composable APIs. If you're interested in a primitive please file an issue. The main contribution of our abstraction focuses on the composable APIs, which we believe to be a more scalable and performant solution.
 
 Our Load-balanced execution API builds on the approach defined in `gunrock/essentials` where we identify key primitives used in computing sparse linear algebra, graph analytics, and other irregular computations alike. Load-balanced versions of these primitives are then implemented, such that the user gets access to the atom, tile, and processor id they are working on as the [C++ lambda](https://en.cppreference.com/w/cpp/language/lambda) signature.
 
