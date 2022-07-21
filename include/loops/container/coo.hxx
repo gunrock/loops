@@ -1,3 +1,14 @@
+/**
+ * @file coo.hxx
+ * @author Muhammad Osama (mosama@ucdavis.edu)
+ * @brief Interface for Coordinate format.
+ * @version 0.1
+ * @date 2022-07-21
+ *
+ * @copyright Copyright (c) 2022
+ *
+ */
+
 #pragma once
 
 #include <loops/container/formats.hxx>
@@ -5,10 +16,11 @@
 #include <loops/container/vector.hxx>
 #include <loops/memory.hxx>
 
-#include <thrust/execution_policy.h>
-#include <thrust/iterator/zip_iterator.h>
 #include <thrust/sort.h>
 #include <thrust/tuple.h>
+#include <thrust/unique.h>
+#include <thrust/execution_policy.h>
+#include <thrust/iterator/zip_iterator.h>
 
 namespace loops {
 
@@ -107,6 +119,29 @@ struct coo_t {
     auto end = thrust::make_zip_iterator(
         thrust::make_tuple(col_indices.end(), row_indices.end()));
     sort(begin, end);
+  }
+
+  /**
+   * @brief Sorts, removes I,J pairs.
+   *
+   */
+  void remove_duplicates() {
+    // Sort by row indices.
+    this->sort_by_row();
+    auto begin = thrust::make_zip_iterator(
+        thrust::make_tuple(row_indices.begin(), col_indices.begin()));
+    auto end = thrust::make_zip_iterator(
+        thrust::make_tuple(row_indices.end(), col_indices.end()));
+
+    // Remove duplicates.
+    auto new_it = thrust::unique_by_key(begin, end, values.begin());
+    auto first_it = thrust::get<1>(new_it);
+    nnzs = thrust::distance(values.begin(), first_it);
+
+    // Resize vectors to new size.
+    row_indices.resize(nnzs);
+    col_indices.resize(nnzs);
+    values.resize(nnzs);
   }
 
  private:
