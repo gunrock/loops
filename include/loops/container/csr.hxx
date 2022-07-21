@@ -1,3 +1,14 @@
+/**
+ * @file csr.hxx
+ * @author Muhammad Osama (mosama@ucdavis.edu)
+ * @brief Interface for Compressed Sparse-Row format.
+ * @version 0.1
+ * @date 2022-07-21
+ *
+ * @copyright Copyright (c) 2022
+ *
+ */
+
 #pragma once
 
 #include <loops/container/vector.hxx>
