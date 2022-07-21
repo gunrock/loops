@@ -110,14 +110,14 @@ void csr(std::size_t rows,
   uniform_distribution(coo.values.begin(), coo.values.end(), value_t(0.0),
                        value_t(1.0));
 
-  // Construct row/col iterators to traverse.
+  // Sort COO matrix.
+  coo.sort_by_row();
+
+  // Zip Iterators.
   auto begin = thrust::make_zip_iterator(
       thrust::make_tuple(coo.row_indices.begin(), coo.col_indices.begin()));
   auto end = thrust::make_zip_iterator(
       thrust::make_tuple(coo.row_indices.end(), coo.col_indices.end()));
-
-  // Sort the COO matrix.
-  thrust::sort_by_key(begin, end, coo.values.begin());
 
   // Remove duplicates.
   auto new_it = thrust::unique_by_key(begin, end, coo.values.begin());
