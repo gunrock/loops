@@ -58,5 +58,5 @@ void work_oriented_bench(nvbench::state& state, nvbench::type_list<value_t>) {
 }
 
 // Define a type_list to use for the type axis:
-using value_types = nvbench::type_list<int, float>;
+using value_types = nvbench::type_list<int, float, double>;
 NVBENCH_BENCH_TYPES(work_oriented_bench, NVBENCH_TYPE_AXES(value_types));
