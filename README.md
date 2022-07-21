@@ -48,14 +48,7 @@ The simple idea behind our load-balancing abstraction is to represent sparse for
 
 ## ✒️ As function and set notation.
 
-Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: 
-
-```math
-M = \{ P_{id}, T_i ... T_j \}, \text{map of processor ids to tiles} 
-```
-```math
-L(S) = \{ M_0, ..., M_m\}, \text{scheduler responsible for creating the maps}
-```
+Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: $M = \{ P_{id}, T_i ... T_j \}$, map of processor ids to tiles, and the scheduler responsible for creating the maps: $L(S) = \{ M_0, ..., M_m}$.
 
 ## 🧫 As three domains: data, schedule and computation.
 ![illustration](https://user-images.githubusercontent.com/9790745/168728299-6b125b44-894a-49bb-92fd-ee85aaa80ae4.png)
