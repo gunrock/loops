@@ -95,31 +95,33 @@ struct matrix_market_t {
    * @param _filename input file name (.mtx)
    * @return coordinate sparse format
    */
-  auto load(std::string _filename) {
+  coo_t<vertex_t, weight_t, memory_space_t::host>& load(std::string _filename) {
     filename = _filename;
     dataset = extract_dataset(extract_filename(filename));
 
     file_t file;
 
-    // Load MTX information
+    /// Load MTX information from the file.
     if ((file = fopen(filename.c_str(), "r")) == NULL) {
       std::cerr << "File could not be opened: " << filename << std::endl;
       exit(1);
     }
 
+    /// TODO: Add support for mtx with no banners.
     if (mm_read_banner(file, &code) != 0) {
       std::cerr << "Could not process Matrix Market banner" << std::endl;
       exit(1);
     }
 
-    int num_rows, num_columns, num_nonzeros;  // XXX: requires all ints intially
+    /// TODO: Update C-interface to support unsigned ints instead.
+    int num_rows, num_columns, num_nonzeros;
     if ((mm_read_mtx_crd_size(file, &num_rows, &num_columns, &num_nonzeros)) !=
         0) {
       std::cerr << "Could not read file info (M, N, NNZ)" << std::endl;
       exit(1);
     }
 
-    // Allocate memory for the matrix.
+    /// Allocate memory for the matrix.
     coo.rows = (std::size_t)num_rows;
     coo.cols = (std::size_t)num_columns;
     coo.nnzs = (std::size_t)num_nonzeros;
@@ -132,6 +134,7 @@ struct matrix_market_t {
     else
       format = matrix_market_format_t::array;
 
+    /// Pattern matrices do not have nonzero values.
     if (mm_is_pattern(code)) {
       data = matrix_market_data_t::pattern;
 
@@ -141,20 +144,17 @@ struct matrix_market_t {
         vertex_t J = 0;
         assert(fscanf(file, " %d %d \n", &I, &J) == 2);
 
-        if (i < 40)
-          std::cout << "(" << I << ", " << J << ") " << std::endl;
         // adjust from 1-based to 0-based indexing
         coo.row_indices[i] = (vertex_t)I - 1;
         coo.col_indices[i] = (vertex_t)J - 1;
 
         // use value 1.0 for all nonzero entries
         coo.values[i] = (weight_t)1.0;
-
-        if (i < 40)
-          std::cout << "(" << coo.row_indices[i] << ", " << coo.col_indices[i]
-                    << ") = " << coo.values[i] << std::endl;
       }
-    } else if (mm_is_real(code) || mm_is_integer(code)) {
+    }
+
+    /// Real or Integer matrices have real or integer values.
+    else if (mm_is_real(code) || mm_is_integer(code)) {
       if (mm_is_real(code))
         data = matrix_market_data_t::real;
       else
@@ -176,8 +176,10 @@ struct matrix_market_t {
       exit(1);
     }
 
-    if (mm_is_symmetric(code)) {  // duplicate off diagonal entries
+    /// Symmetric matrices have symmetric halves.
+    if (mm_is_symmetric(code)) {
       scheme = matrix_market_storage_scheme_t::symmetric;
+
       vertex_t off_diagonals = 0;
       for (vertex_t i = 0; i < coo.nnzs; ++i) {
         if (coo.row_indices[i] != coo.col_indices[i])
