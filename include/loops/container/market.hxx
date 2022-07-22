@@ -81,6 +81,9 @@ struct matrix_market_t {
   matrix_market_data_t data;              // Data type
   matrix_market_storage_scheme_t scheme;  // Storage scheme
 
+  // mtx are generally written as coordinate format
+  coo_t<vertex_t, weight_t, memory_space_t::host> coo;
+
   matrix_market_t() {}
   ~matrix_market_t() {}
 
@@ -116,10 +119,13 @@ struct matrix_market_t {
       exit(1);
     }
 
-    // mtx are generally written as coordinate formaat
-    coo_t<vertex_t, weight_t, memory_space_t::host> coo(
-        (std::size_t)num_rows, (std::size_t)num_columns,
-        (std::size_t)num_nonzeros);
+    // Allocate memory for the matrix.
+    coo.rows = (std::size_t)num_rows;
+    coo.cols = (std::size_t)num_columns;
+    coo.nnzs = (std::size_t)num_nonzeros;
+    coo.row_indices.resize(num_nonzeros);
+    coo.col_indices.resize(num_nonzeros);
+    coo.values.resize(num_nonzeros);
 
     if (mm_is_coordinate(code))
       format = matrix_market_format_t::coordinate;
@@ -131,11 +137,22 @@ struct matrix_market_t {
 
       // pattern matrix defines sparsity pattern, but not values
       for (vertex_t i = 0; i < num_nonzeros; ++i) {
-        assert(fscanf(file, " %d %d \n", &(coo.row_indices[i]),
-                      &(coo.col_indices[i])) == 2);
-        coo.row_indices[i]--;  // adjust from 1-based to 0-based indexing
-        coo.col_indices[i]--;
-        coo.values[i] = (weight_t)1.0;  // use value 1.0 for all nonzero entries
+        vertex_t I = 0;
+        vertex_t J = 0;
+        assert(fscanf(file, " %d %d \n", &I, &J) == 2);
+
+        if (i < 40)
+          std::cout << "(" << I << ", " << J << ") " << std::endl;
+        // adjust from 1-based to 0-based indexing
+        coo.row_indices[i] = (vertex_t)I - 1;
+        coo.col_indices[i] = (vertex_t)J - 1;
+
+        // use value 1.0 for all nonzero entries
+        coo.values[i] = (weight_t)1.0;
+
+        if (i < 40)
+          std::cout << "(" << coo.row_indices[i] << ", " << coo.col_indices[i]
+                    << ") = " << coo.values[i] << std::endl;
       }
     } else if (mm_is_real(code) || mm_is_integer(code)) {
       if (mm_is_real(code))
@@ -167,38 +184,32 @@ struct matrix_market_t {
           ++off_diagonals;
       }
 
-      vertex_t _nonzeros = 2 * off_diagonals + (coo.nnzs - off_diagonals);
-
-      vector_t<vertex_t, memory_space_t::host> new_I(_nonzeros);
-      vector_t<vertex_t, memory_space_t::host> new_J(_nonzeros);
-      vector_t<weight_t, memory_space_t::host> new_V(_nonzeros);
-
-      vertex_t* _I = new_I.data();
-      vertex_t* _J = new_J.data();
-      weight_t* _V = new_V.data();
+      // Duplicate off-diagonal entries for symmetric matrix.
+      std::size_t _nonzeros = 2 * off_diagonals + (coo.nnzs - off_diagonals);
+      coo_t<vertex_t, weight_t, memory_space_t::host> temp(coo.rows, coo.cols,
+                                                           _nonzeros);
 
       vertex_t ptr = 0;
       for (vertex_t i = 0; i < coo.nnzs; ++i) {
         if (coo.row_indices[i] != coo.col_indices[i]) {
-          _I[ptr] = coo.row_indices[i];
-          _J[ptr] = coo.col_indices[i];
-          _V[ptr] = coo.values[i];
+          temp.row_indices[ptr] = coo.row_indices[i];
+          temp.col_indices[ptr] = coo.col_indices[i];
+          temp.values[ptr] = coo.values[i];
           ++ptr;
-          _J[ptr] = coo.row_indices[i];
-          _I[ptr] = coo.col_indices[i];
-          _V[ptr] = coo.values[i];
+          temp.col_indices[ptr] = coo.row_indices[i];
+          temp.row_indices[ptr] = coo.col_indices[i];
+          temp.values[ptr] = coo.values[i];
           ++ptr;
         } else {
-          _I[ptr] = coo.row_indices[i];
-          _J[ptr] = coo.col_indices[i];
-          _V[ptr] = coo.values[i];
+          temp.row_indices[ptr] = coo.row_indices[i];
+          temp.col_indices[ptr] = coo.col_indices[i];
+          temp.values[ptr] = coo.values[i];
           ++ptr;
         }
       }
-      coo.row_indices = new_I;
-      coo.col_indices = new_J;
-      coo.values = new_V;
-      coo.nnzs = _nonzeros;
+
+      // Move data to the original COO matrix.
+      coo = temp;
     }  // end symmetric case
 
     fclose(file);
