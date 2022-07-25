@@ -1,7 +1,8 @@
 /**
  * @file matrix_market.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief
+ * @brief Matrix Market format reader.
+ * @see http://math.nist.gov/MatrixMarket/
  * @version 0.1
  * @date 2020-10-09
  *
