@@ -15,8 +15,6 @@
 #include <loops/container/container.hxx>
 #include <loops/algorithms/spmv/work_oriented.cuh>
 
-#include <nvbench/nvbench.cuh>
-
 #define LOOPS_CUPTI_SUPPORTED 0
 
 using namespace loops;
@@ -57,24 +55,5 @@ NVBENCH_BENCH_TYPES(work_oriented_bench, NVBENCH_TYPE_AXES(value_types));
 
 int main(int argc, char** argv) {
   parameters_t params(argc, argv);
-  filename = params.filename;
-
-  if (params.help) {
-    // Print NVBench help.
-    const char* args[1] = {"-h"};
-    NVBENCH_MAIN_BODY(1, args);
-  } else {
-    // Create a new argument array without matrix filename to pass to NVBench.
-    char* args[argc - 2];
-    int j = 0;
-    for (int i = 0; i < argc; i++) {
-      if (strcmp(argv[i], "--market") == 0 || strcmp(argv[i], "-m") == 0) {
-        i++;
-        continue;
-      }
-      args[j] = argv[i];
-      j++;
-    }
-    NVBENCH_MAIN_BODY(argc - 2, args);
-  }
+  NVBENCH_MAIN_BODY(params.nvbench_argc(), params.nvbench_argv());
 }
