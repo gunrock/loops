@@ -34,6 +34,7 @@ set(PROJECT_DEPS_DIR externals)
 # end /* Dependencies directory */
 
 # begin /* Include cmake modules */
+include(${PROJECT_SOURCE_DIR}/cmake/FetchColors.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchThrustCUB.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchModernGPU.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchCXXOpts.cmake)
@@ -58,13 +59,21 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 ############ ADD LIBRARY: LOOPS (HEADER-ONLY) ############
 add_library(loops INTERFACE)
 
+
+####################################################
+############### SET SM ARCHITECTURE ################
+####################################################
+
+## Note: This applies to NVBench as well.
+## Can be used for applications by extracting the
+## CUDA_ARCHITECTURES property from loops project.
+## see: get_target_properties()
+message(STATUS "${Magenta}Set SM Architecture using -DCMAKE_CUDA_ARCHITECTURES=75,80${ColourReset}")
+set(CMAKE_CUDA_ARCHITECTURES 75)
+
 ####################################################
 ############### SET TARGET PROPERTIES ##############
 ####################################################
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 75)
-endif()
-
 set_target_properties(loops 
   PROPERTIES
     CXX_STANDARD 17
@@ -124,7 +133,6 @@ target_link_libraries(loops
 ################# TARGET SOURCES ###################
 ####################################################
 target_sources(loops
-  INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/util/gitsha1make.c"
   INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/container/detail/mmio.cpp"
 )
 

@@ -13,12 +13,9 @@
 #include <chrono>
 #include <thrust/random.h>
 #include <thrust/distance.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/iterator/zip_iterator.h>
 #include <thrust/transform.h>
 #include <thrust/execution_policy.h>
-#include <thrust/sort.h>
-#include <thrust/unique.h>
+#include <thrust/iterator/counting_iterator.h>
 
 #include <loops/memory.hxx>
 #include <loops/container/formats.hxx>
@@ -110,26 +107,8 @@ void csr(std::size_t rows,
   uniform_distribution(coo.values.begin(), coo.values.end(), value_t(0.0),
                        value_t(1.0));
 
-  // Construct row/col iterators to traverse.
-  auto begin = thrust::make_zip_iterator(
-      thrust::make_tuple(coo.row_indices.begin(), coo.col_indices.begin()));
-  auto end = thrust::make_zip_iterator(
-      thrust::make_tuple(coo.row_indices.end(), coo.col_indices.end()));
-
-  // Sort the COO matrix.
-  thrust::sort_by_key(begin, end, coo.values.begin());
-
   // Remove duplicates.
-  auto new_it = thrust::unique_by_key(begin, end, coo.values.begin());
-  auto first_it = thrust::get<1>(new_it);
-  auto new_distance = thrust::distance(coo.values.begin(), first_it);
-
-  // Resize the COO matrix.
-  coo.row_indices.resize(new_distance);
-  coo.col_indices.resize(new_distance);
-  coo.values.resize(new_distance);
-  coo.nnzs = new_distance;
-
+  coo.remove_duplicates();
   matrix = coo;
 }
 

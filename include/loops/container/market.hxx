@@ -1,22 +1,26 @@
 /**
  * @file matrix_market.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief
+ * @brief Matrix Market format reader.
+ * @see http://math.nist.gov/MatrixMarket/
  * @version 0.1
- * @date 2022-02-03
+ * @date 2020-10-09
  *
- * @copyright Copyright (c) 2022
+ * @copyright Copyright (c) 2020
  *
  */
 
 #pragma once
 
 #include <string>
+#include <limits>
 
 #include <loops/container/detail/mmio.hxx>
+
 #include <loops/util/filepath.hxx>
 #include <loops/container/formats.hxx>
 #include <loops/memory.hxx>
+#include <loops/error.hxx>
 
 namespace loops {
 
@@ -64,7 +68,7 @@ enum matrix_market_storage_scheme_t { general, hermitian, symmetric, skew };
  *
  * Indices are 1-based i.2. A(1,1) is the first element.
  */
-template <typename vertex_t, typename edge_t, typename weight_t>
+template <typename index_t, typename offset_t, typename type_t>
 struct matrix_market_t {
   // typedef FILE* file_t;
   // typedef MM_typecode matrix_market_code_t;
@@ -109,17 +113,24 @@ struct matrix_market_t {
       exit(1);
     }
 
-    int num_rows, num_columns, num_nonzeros;  // XXX: requires all ints intially
+    std::size_t num_rows, num_columns, num_nonzeros;
     if ((mm_read_mtx_crd_size(file, &num_rows, &num_columns, &num_nonzeros)) !=
         0) {
       std::cerr << "Could not read file info (M, N, NNZ)" << std::endl;
       exit(1);
     }
 
-    // mtx are generally written as coordinate formaat
-    coo_t<vertex_t, weight_t, memory_space_t::host> coo(
-        (std::size_t)num_rows, (std::size_t)num_columns,
-        (std::size_t)num_nonzeros);
+    error::throw_if_exception(
+        num_rows >= std::numeric_limits<index_t>::max() ||
+            num_columns >= std::numeric_limits<index_t>::max(),
+        "index_t overflow");
+    error::throw_if_exception(
+        num_nonzeros >= std::numeric_limits<offset_t>::max(),
+        "offset_t overflow");
+
+    // mtx are generally written as coordinate format
+    coo_t<index_t, type_t, memory_space_t::host> coo(
+        (index_t)num_rows, (index_t)num_columns, (offset_t)num_nonzeros);
 
     if (mm_is_coordinate(code))
       format = matrix_market_format_t::coordinate;
@@ -130,12 +141,19 @@ struct matrix_market_t {
       data = matrix_market_data_t::pattern;
 
       // pattern matrix defines sparsity pattern, but not values
-      for (vertex_t i = 0; i < num_nonzeros; ++i) {
-        assert(fscanf(file, " %d %d \n", &(coo.row_indices[i]),
-                      &(coo.col_indices[i])) == 2);
-        coo.row_indices[i]--;  // adjust from 1-based to 0-based indexing
-        coo.col_indices[i]--;
-        coo.values[i] = (weight_t)1.0;  // use value 1.0 for all nonzero entries
+      for (index_t i = 0; i < num_nonzeros; ++i) {
+        std::size_t row_index{0}, col_index{0};
+        auto num_assigned = fscanf(file, " %zu %zu \n", &row_index, &col_index);
+        error::throw_if_exception(num_assigned != 2,
+                                  "Could not read edge from market file");
+        error::throw_if_exception(row_index == 0,
+                                  "Market file is zero-indexed");
+        error::throw_if_exception(col_index == 0,
+                                  "Market file is zero-indexed");
+        // set and adjust from 1-based to 0-based indexing
+        coo.row_indices[i] = (index_t)row_index - 1;
+        coo.col_indices[i] = (index_t)col_index - 1;
+        coo.values[i] = (type_t)1.0;  // use value 1.0 for all nonzero entries
       }
     } else if (mm_is_real(code) || mm_is_integer(code)) {
       if (mm_is_real(code))
@@ -143,16 +161,23 @@ struct matrix_market_t {
       else
         data = matrix_market_data_t::integer;
 
-      for (vertex_t i = 0; i < coo.nnzs; ++i) {
-        vertex_t I = 0;
-        vertex_t J = 0;
-        double V = 0.0f;
+      for (index_t i = 0; i < coo.nnzs; ++i) {
+        std::size_t row_index{0}, col_index{0};
+        double weight{0.0};
 
-        assert(fscanf(file, " %d %d %lf \n", &I, &J, &V) == 3);
+        auto num_assigned =
+            fscanf(file, " %zu %zu %lf \n", &row_index, &col_index, &weight);
 
-        coo.row_indices[i] = (vertex_t)I - 1;
-        coo.col_indices[i] = (vertex_t)J - 1;
-        coo.values[i] = (weight_t)V;
+        error::throw_if_exception(
+            num_assigned != 3, "Could not read weighted edge from market file");
+        error::throw_if_exception(row_index == 0,
+                                  "Market file is zero-indexed");
+        error::throw_if_exception(col_index == 0,
+                                  "Market file is zero-indexed");
+
+        coo.row_indices[i] = (index_t)row_index - 1;
+        coo.col_indices[i] = (index_t)col_index - 1;
+        coo.values[i] = (type_t)weight;
       }
     } else {
       std::cerr << "Unrecognized matrix market format type" << std::endl;
@@ -161,24 +186,20 @@ struct matrix_market_t {
 
     if (mm_is_symmetric(code)) {  // duplicate off diagonal entries
       scheme = matrix_market_storage_scheme_t::symmetric;
-      vertex_t off_diagonals = 0;
-      for (vertex_t i = 0; i < coo.nnzs; ++i) {
+      index_t off_diagonals = 0;
+      for (index_t i = 0; i < coo.nnzs; ++i) {
         if (coo.row_indices[i] != coo.col_indices[i])
           ++off_diagonals;
       }
 
-      vertex_t _nonzeros = 2 * off_diagonals + (coo.nnzs - off_diagonals);
+      index_t _nonzeros = 2 * off_diagonals + (coo.nnzs - off_diagonals);
 
-      vector_t<vertex_t, memory_space_t::host> new_I(_nonzeros);
-      vector_t<vertex_t, memory_space_t::host> new_J(_nonzeros);
-      vector_t<weight_t, memory_space_t::host> new_V(_nonzeros);
+      vector_t<index_t, memory_space_t::host> _I(_nonzeros);
+      vector_t<index_t, memory_space_t::host> _J(_nonzeros);
+      vector_t<type_t, memory_space_t::host> _V(_nonzeros);
 
-      vertex_t* _I = new_I.data();
-      vertex_t* _J = new_J.data();
-      weight_t* _V = new_V.data();
-
-      vertex_t ptr = 0;
-      for (vertex_t i = 0; i < coo.nnzs; ++i) {
+      index_t ptr = 0;
+      for (index_t i = 0; i < coo.nnzs; ++i) {
         if (coo.row_indices[i] != coo.col_indices[i]) {
           _I[ptr] = coo.row_indices[i];
           _J[ptr] = coo.col_indices[i];
@@ -195,16 +216,14 @@ struct matrix_market_t {
           ++ptr;
         }
       }
-      coo.row_indices = new_I;
-      coo.col_indices = new_J;
-      coo.values = new_V;
+      coo.row_indices = _I;
+      coo.col_indices = _J;
+      coo.values = _V;
       coo.nnzs = _nonzeros;
     }  // end symmetric case
 
     fclose(file);
-
     return coo;
   }
 };
-
 }  // namespace loops
