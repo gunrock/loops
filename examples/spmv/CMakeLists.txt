@@ -8,12 +8,19 @@ set(SOURCES
 
 foreach(SOURCE IN LISTS SOURCES)
   get_filename_component(TEST_NAME ${SOURCE} NAME_WLE)
-  add_executable(loops.spmv.${TEST_NAME} ${SOURCE})
-  target_link_libraries(loops.spmv.${TEST_NAME} PRIVATE loops)
-  set_target_properties(loops.spmv.${TEST_NAME} 
-    PROPERTIES 
+  string(PREPEND TEST_NAME "loops.spmv.")
+  add_executable(${TEST_NAME} ${SOURCE})
+  target_link_libraries(${TEST_NAME}
+    PRIVATE loops
+  )
+
+  set_target_properties(${TEST_NAME}
+    PROPERTIES
+      CXX_STANDARD 17
+      CUDA_STANDARD 17
       CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES}
   )
-  message(STATUS "Example Added: loops.spmv.${TEST_NAME}")
+  
+  message(STATUS "Example Added: ${TEST_NAME}")
 endforeach()
 # end /* Add application */
