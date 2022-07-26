@@ -11,14 +11,9 @@
 
 #include "parameters.hxx"
 
-#include <loops/memory.hxx>
-#include <loops/container/vector.hxx>
-#include <loops/util/device.hxx>
-#include <loops/util/sample.hxx>
 #include <loops/util/generate.hxx>
+#include <loops/container/container.hxx>
 #include <loops/algorithms/spmv/work_oriented.cuh>
-
-#include <nvbench/nvbench.cuh>
 
 #define LOOPS_CUPTI_SUPPORTED 0
 
@@ -30,17 +25,14 @@ void work_oriented_bench(nvbench::state& state, nvbench::type_list<value_t>) {
   using offset_t = int;
   using type_t = value_t;
 
-  /// Get sample CSR matrix and create x, y vectors.
-  std::size_t rows = 1 << 20;
-  std::size_t cols = 1 << 20;
-
-  csr_t<index_t, offset_t, value_t> csr;
-  generate::random::csr<index_t, offset_t, type_t>(rows, cols, 0.0000001, csr);
+  matrix_market_t<index_t, offset_t, type_t> mtx;
+  csr_t<index_t, offset_t, type_t> csr(mtx.load(filename));
 
   vector_t<type_t> x(csr.rows);
   vector_t<type_t> y(csr.rows);
 
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), type_t(1.0),
+                                         type_t(10.0));
 
 #if LOOPS_CUPTI_SUPPORTED
   /// Add CUPTI metrics to collect for the state.
@@ -60,3 +52,8 @@ void work_oriented_bench(nvbench::state& state, nvbench::type_list<value_t>) {
 // Define a type_list to use for the type axis:
 using value_types = nvbench::type_list<int, float, double>;
 NVBENCH_BENCH_TYPES(work_oriented_bench, NVBENCH_TYPE_AXES(value_types));
+
+int main(int argc, char** argv) {
+  parameters_t params(argc, argv);
+  NVBENCH_MAIN_BODY(params.nvbench_argc(), params.nvbench_argv());
+}
