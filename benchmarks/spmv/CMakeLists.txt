@@ -8,7 +8,7 @@ foreach(SOURCE IN LISTS BENCHMARK_SOURCES)
   add_executable(${BENCHMARK_NAME} ${SOURCE})
   target_link_libraries(${BENCHMARK_NAME}
     PRIVATE loops
-    PRIVATE nvbench::main
+    # PRIVATE nvbench::main
     PRIVATE nvbench::nvbench
   )
 
