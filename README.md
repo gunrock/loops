@@ -115,7 +115,7 @@ __global__ void __launch_bounds__(threads_per_block, 2)
 ### (1) Define and configure load-balancing schedule.
 Allocates any temporary memory required for load-balancing, as well as constructs a schedule per processors partition (defined using cooperative groups).
 ```cpp
-  using setup_t = schedule::setup<schedule::algroithms_t::tile_mapped,
+  using setup_t = schedule::setup<schedule::algroithms_t::group_mapped,
                                   threads_per_block, 32, index_t, offset_t>;
 
   /// Allocate temporary storage for the schedule.

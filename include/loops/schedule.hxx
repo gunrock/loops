@@ -23,7 +23,7 @@ namespace schedule {
 enum algorithms_t {
   work_oriented,  /// < Work oriented scheduling algorithm.
   thread_mapped,  /// < Thread mapped scheduling algorithm.
-  tile_mapped,    /// < Tile mapped scheduling algorithm.
+  group_mapped,   /// < Group mapped scheduling algorithm.
   bucketing,      /// < Bucketing scheduling algorithm.
 };
 
@@ -57,5 +57,5 @@ class setup;
 }  // namespace loops
 
 #include <loops/schedule/thread_mapped.hxx>
-#include <loops/schedule/tile_mapped.hxx>
+#include <loops/schedule/group_mapped.hxx>
 #include <loops/schedule/work_oriented.hxx>
