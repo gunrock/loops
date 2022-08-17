@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
 
   // Input and output vectors.
-  vector_t<type_t> x(csr.rows);
+  vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
 
   // Generate random numbers between [0, 1].
