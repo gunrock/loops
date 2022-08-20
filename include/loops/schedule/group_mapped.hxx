@@ -1,7 +1,7 @@
 /**
- * @file tile_mapped.hxx
+ * @file group_mapped.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief Tile-mapped schedule (map work to tiles, process using individual
+ * @brief Group-mapped schedule (map work to tiles, process using individual
  * threads within the tile.)
  * @version 0.1
  * @date 2022-02-04
@@ -32,7 +32,7 @@ namespace cg = cooperative_groups;
 namespace cg_x = cooperative_groups::experimental;
 
 template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::tile_mapped, atoms_type, atom_size_type> {
+class atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type> {
  public:
   using atoms_t = atoms_type;
   using atoms_iterator_t = atoms_t*;
@@ -54,7 +54,7 @@ class atom_traits<algorithms_t::tile_mapped, atoms_type, atom_size_type> {
 };
 
 template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::tile_mapped, tiles_type, tile_size_type> {
+class tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type> {
  public:
   using tiles_t = tiles_type;
   using tiles_iterator_t = tiles_t*;
@@ -79,15 +79,15 @@ template <std::size_t THREADS_PER_BLOCK,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type>
-class setup<algorithms_t::tile_mapped,
+class setup<algorithms_t::group_mapped,
             THREADS_PER_BLOCK,
             THREADS_PER_TILE,
             tiles_type,
             atoms_type,
             tile_size_type,
             atom_size_type>
-    : public tile_traits<algorithms_t::tile_mapped, tiles_type, tile_size_type>,
-      public atom_traits<algorithms_t::tile_mapped,
+    : public tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type>,
+      public atom_traits<algorithms_t::group_mapped,
                          atoms_type,
                          atom_size_type> {
  public:
@@ -99,9 +99,9 @@ class setup<algorithms_t::tile_mapped,
   using atom_size_t = atom_size_type;
 
   using tile_traits_t =
-      tile_traits<algorithms_t::tile_mapped, tiles_type, tile_size_type>;
+      tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type>;
   using atom_traits_t =
-      atom_traits<algorithms_t::tile_mapped, atoms_type, atom_size_type>;
+      atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type>;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,

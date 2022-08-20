@@ -158,6 +158,11 @@ class setup<algorithms_t::thread_mapped,
     return loops::range(tile_traits_t::begin()[tile],
                         tile_traits_t::begin()[tile + 1]);
   }
+
+  template <typename iterator_t>
+  __device__ auto atoms(const tile_size_t& tile, iterator_t count_entries) {
+    return loops::range(count_entries(tile), tile_traits_t::begin()[tile + 1]);
+  }
 };
 
 }  // namespace schedule
