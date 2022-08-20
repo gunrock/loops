@@ -36,7 +36,7 @@ __global__ void __launch_bounds__(threads_per_block, 2)
                    const type_t* values,
                    const type_t* x,
                    type_t* y) {
-  using setup_t = schedule::setup<schedule::algorithms_t::tile_mapped,
+  using setup_t = schedule::setup<schedule::algorithms_t::group_mapped,
                                   threads_per_block, 32, index_t, offset_t>;
 
   /// Allocate temporary storage for the schedule.
