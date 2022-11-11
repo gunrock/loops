@@ -4,6 +4,7 @@ set(SOURCES
   thread_mapped.cu
   group_mapped.cu
   work_oriented.cu
+  merge_path.cu
 )
 
 foreach(SOURCE IN LISTS SOURCES)
