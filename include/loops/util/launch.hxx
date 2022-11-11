@@ -66,8 +66,8 @@ void cooperative(cudaStream_t stream,
 template <typename func_t, typename... args_t>
 void non_cooperative(cudaStream_t stream,
                      const func_t& kernel,
-                     std::size_t number_of_blocks,
-                     std::size_t threads_per_block,
+                     dim3 number_of_blocks,
+                     dim3 threads_per_block,
                      args_t&&... args) {
   kernel<<<number_of_blocks, threads_per_block, 0, stream>>>(
       std::forward<args_t>(args)...);

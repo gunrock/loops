@@ -85,11 +85,12 @@ class setup<algorithms_t::group_mapped,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type>
-    : public tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type>,
-      public atom_traits<algorithms_t::group_mapped,
-                         atoms_type,
-                         atom_size_type> {
+            atom_size_type> : public tile_traits<algorithms_t::group_mapped,
+                                                 tiles_type,
+                                                 tile_size_type>,
+                              public atom_traits<algorithms_t::group_mapped,
+                                                 atoms_type,
+                                                 atom_size_type> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -226,6 +227,14 @@ class setup<algorithms_t::group_mapped,
   }
 
 };  // namespace schedule
+
+template <std::size_t threads_per_block, typename tiles_t, typename atoms_t>
+using warp_mapped =
+    setup<algorithms_t::group_mapped, threads_per_block, 32, tiles_t, atoms_t>;
+
+template <std::size_t threads_per_block, typename tiles_t, typename atoms_t>
+using block_mapped =
+    setup<algorithms_t::group_mapped, threads_per_block, 32, tiles_t, atoms_t>;
 
 }  // namespace schedule
 }  // namespace loops
