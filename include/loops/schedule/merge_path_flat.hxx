@@ -18,7 +18,7 @@
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
 
-#include <loops/util/coordinate.hxx>
+#include <loops/container/coordinate.hxx>
 
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/execution_policy.h>
@@ -26,6 +26,8 @@
 
 namespace loops {
 namespace schedule {
+
+using coord_t = coordinate_t<unsigned int>;
 
 /**
  * @brief Traits for Atom.
@@ -113,7 +115,7 @@ __global__ void generate_search_coordinates(tiles_t* tiles,
                                             tile_size_t num_tiles,
                                             atom_size_t num_atoms,
                                             std::size_t num_merge_tiles,
-                                            coordinate_t* d_tile_coordinates) {
+                                            coord_t* d_tile_coordinates) {
   enum : unsigned int {
     items_per_tile = THREADS_PER_BLOCK * ITEMS_PER_THREAD,
   };
@@ -124,7 +126,7 @@ __global__ void generate_search_coordinates(tiles_t* tiles,
   if (tile_idx < num_merge_tiles + 1) {
     thrust::counting_iterator<atoms_t> atoms_indices(0);
     tile_size_t diagonal = (tile_idx * items_per_tile);
-    coordinate_t tile_coordinate;
+    coord_t tile_coordinate;
 
     // Search the merge path (block-wide.)
     tile_coordinate = search::_binary_search(diagonal, tiles + 1, atoms_indices,
@@ -223,8 +225,8 @@ class preprocess_t {
  private:
   std::size_t total_work;
   std::size_t num_merge_tiles;
-  coordinate_t* d_tile_coordinates;
-  thrust::device_vector<coordinate_t> tile_coordinates;
+  coord_t* d_tile_coordinates;
+  thrust::device_vector<coord_t> tile_coordinates;
 };
 
 }  // namespace merge_path
@@ -284,7 +286,7 @@ class setup<algorithms_t::merge_path_flat,
 
   /// Shared memory type required by this thread block.
   struct storage_t {
-    coordinate_t tile_coords[2];
+    coord_t tile_coords[2];
     tiles_t tile_end_offset[items_per_thread + items_per_tile + 1];
   };
 
@@ -321,7 +323,8 @@ class setup<algorithms_t::merge_path_flat,
     atom_size_t tid = (blockIdx.x * gridDim.y) + blockIdx.y;
 
     if (tid >= num_merge_tiles)
-      return coordinate_t{-1, -1};
+      return coord_t{std::numeric_limits<unsigned int>::max(),
+                     std::numeric_limits<unsigned int>::max()};
 
     /// Two threads per-block perform the search to find the diagonal for a
     /// block. This limits the search each thread has to do to per-block
@@ -333,9 +336,9 @@ class setup<algorithms_t::merge_path_flat,
         thrust::counting_iterator<atoms_t> atoms_indices(0);
 
         /// Search across the diagonals to find coordinates to process.
-        auto st = search::_binary_search(diagonal, (tile_traits_t::begin() + 1),
-                                         atoms_indices, tile_traits_t::size(),
-                                         atom_traits_t::size());
+        coord_t st = search::_binary_search(
+            diagonal, (tile_traits_t::begin() + 1), atoms_indices,
+            tile_traits_t::size(), atom_traits_t::size());
 
         buffer.tile_coords[threadIdx.x] = st;
       } else {
@@ -347,9 +350,8 @@ class setup<algorithms_t::merge_path_flat,
     auto tile_start_coord = buffer.tile_coords[0];
     auto tile_end_coord = buffer.tile_coords[1];
 
-    tile_size_t tile_num_tiles = tile_end_coord.first - tile_start_coord.first;
-    atom_size_t tile_num_nonzeros =
-        tile_end_coord.second - tile_start_coord.second;
+    tile_size_t tile_num_tiles = tile_end_coord.x - tile_start_coord.x;
+    atom_size_t tile_num_nonzeros = tile_end_coord.y - tile_start_coord.y;
 
     tiles_iterator_t end_offsets = tile_traits_t::begin() + 1;
 
@@ -358,25 +360,22 @@ class setup<algorithms_t::merge_path_flat,
          item < tile_num_tiles + items_per_thread;  // thread's work.
          item += threads_per_block)                 // stride by block dim.
     {
-      const int offset = min(static_cast<int>(tile_start_coord.first + item),
+      const int offset = min(static_cast<int>(tile_start_coord.x + item),
                              static_cast<int>(tile_traits_t::size() - 1));
       buffer.tile_end_offset[item] = end_offsets[offset];
     }
 
     // Set these iterators for use later.
-    tiles_counting_it =
-        thrust::counting_iterator<tiles_t>(tile_start_coord.first);
-    atoms_counting_it =
-        thrust::counting_iterator<atoms_t>(tile_start_coord.second);
+    tiles_counting_it = thrust::counting_iterator<tiles_t>(tile_start_coord.x);
+    atoms_counting_it = thrust::counting_iterator<atoms_t>(tile_start_coord.y);
 
     __syncthreads();
 
     // Search for the thread's starting coordinate within the merge tile
-    thrust::counting_iterator<atoms_t> tile_atoms_indices(
-        tile_start_coord.second);
+    thrust::counting_iterator<atoms_t> tile_atoms_indices(tile_start_coord.y);
 
     /// Search across the diagonals to find coordinates to process.
-    auto thread_start_coord = search::_binary_search(
+    coord_t thread_start_coord = search::_binary_search(
         atom_size_t(threadIdx.x * items_per_thread), buffer.tile_end_offset,
         tile_atoms_indices, tile_num_tiles, tile_num_nonzeros);
 
@@ -385,20 +384,39 @@ class setup<algorithms_t::merge_path_flat,
     return thread_start_coord;
   }
 
-  __device__ __forceinline__ bool is_valid_accessor(coordinate_t& coord) const {
-    return (coord.first >= 0) && (coord.second >= 0);
+  __device__ __forceinline__ bool is_valid_accessor(coord_t& coord) const {
+    return (coord.x != std::numeric_limits<unsigned int>::max()) &&
+           (coord.y != std::numeric_limits<unsigned int>::max());
   }
 
+  /**
+   * @brief Range from 0 to ITEMS_PER_THREAD.
+   *
+   * @return step_range_t<int> returns the range.
+   */
   __device__ __forceinline__ step_range_t<int> virtual_idx() const {
     return custom_stride_range(int(0), int(items_per_thread), tiles_t(1));
   }
 
-  __device__ __forceinline__ atoms_t atom_idx(int vid, coordinate_t& coord) {
-    return min(atoms_counting_it[coord.second], int(atom_traits_t::size()) - 1);
+  /**
+   * @brief Returns the atoms index, notably it does not increment it.
+   *
+   * @param vid ITEM to be processed.
+   * @param coord load-balanced map.
+   * @return atoms_t Return the atom index.
+   */
+  __device__ __forceinline__ atoms_t atom_idx(int vid, coord_t& coord) {
+    return min(atoms_counting_it[coord.y], int(atom_traits_t::size()) - 1);
   }
 
-  __device__ __forceinline__ tiles_t tile_idx(coordinate_t& coord) const {
-    return tiles_counting_it[coord.first];
+  /**
+   * @brief Returns the tile index, notably it does not increment it.
+   *
+   * @param coord load-balanced map.
+   * @return tiles_t Return the tile index.
+   */
+  __device__ __forceinline__ tiles_t tile_idx(coord_t& coord) const {
+    return tiles_counting_it[coord.x];
   }
 
  private:
