@@ -15,7 +15,7 @@
 #include <thrust/distance.h>
 #include <thrust/iterator/counting_iterator.h>
 
-#include <loops/util/coordinate.hxx>
+#include <loops/container/coordinate.hxx>
 
 #pragma once
 
@@ -37,6 +37,7 @@ __device__ __forceinline__ auto _binary_search(const offset_t& diagonal,
                                                const yit_t b,
                                                const offset_t& a_len,
                                                const offset_t& b_len) {
+  using coord_idx_t = unsigned int;
   /// Diagonal search range (in x-coordinate space)
   /// Note that the subtraction can result into a negative number, in which
   /// case the max would result as 0. But if we use offset_t here, and it is
@@ -54,7 +55,8 @@ __device__ __forceinline__ auto _binary_search(const offset_t& diagonal,
         return a[idx] <= b[diagonal - idx - 1];
       });
 
-  return coordinate_t{int(min(*it, a_len)), int(diagonal - *it)};
+  return coordinate_t<coord_idx_t>{static_cast<coord_idx_t>(min(*it, a_len)),
+                                   static_cast<coord_idx_t>(diagonal - *it)};
 }
 }  // namespace search
 }  // namespace loops
