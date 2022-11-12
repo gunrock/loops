@@ -35,11 +35,13 @@ namespace spmv {
  */
 template <std::size_t threads_per_block,
           std::size_t items_per_thread,
+          typename meta_t,
           typename index_t,
           typename offset_t,
           typename type_t>
 __global__ void __launch_bounds__(threads_per_block, 2)
-    __merge_path_flat(std::size_t rows,
+    __merge_path_flat(meta_t meta,
+                      std::size_t rows,
                       std::size_t cols,
                       std::size_t nnz,
                       offset_t* offsets,
@@ -56,7 +58,7 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   __shared__ storage_t temporary_storage;
 
   /// Construct the schedule.
-  setup_t config(temporary_storage, offsets, rows, nnz);
+  setup_t config(meta, temporary_storage, offsets, rows, nnz);
   auto map = config.init();
 
   if (!config.is_valid_accessor(map))
@@ -97,7 +99,13 @@ void merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
                      cudaStream_t stream = 0) {
   // Create a schedule.
   constexpr std::size_t block_size = 128;
-  constexpr std::size_t items_per_thread = 3;
+  constexpr std::size_t items_per_thread = 4;
+
+  using preprocessor_t =
+      schedule::merge_path::preprocess_t<block_size, items_per_thread, index_t,
+                                         offset_t, std::size_t, std::size_t>;
+
+  preprocessor_t meta(csr.offsets.data().get(), csr.rows, csr.nnzs, stream);
 
   /// Set-up kernel launch parameters and run the kernel.
   int max_dim_x;
@@ -107,13 +115,13 @@ void merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
 
   // TODO: Fix this later.
   dim3 grid_size(num_merge_tiles, 1, 1);
-  launch::non_cooperative(stream,
-                          __merge_path_flat<block_size, items_per_thread,
-                                            index_t, offset_t, type_t>,
-                          grid_size, block_size, csr.rows, csr.cols, csr.nnzs,
-                          csr.offsets.data().get(), csr.indices.data().get(),
-                          csr.values.data().get(), x.data().get(),
-                          y.data().get());
+  launch::non_cooperative(
+      stream,
+      __merge_path_flat<block_size, items_per_thread, preprocessor_t, index_t,
+                        offset_t, type_t>,
+      grid_size, block_size, meta, csr.rows, csr.cols, csr.nnzs,
+      csr.offsets.data().get(), csr.indices.data().get(),
+      csr.values.data().get(), x.data().get(), y.data().get());
   cudaStreamSynchronize(stream);
 }
 
