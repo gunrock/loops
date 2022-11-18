@@ -20,6 +20,8 @@
 #include <loops/memory.hxx>
 #include <iostream>
 
+#include <cub/block/block_scan.cuh>
+
 namespace loops {
 namespace algorithms {
 namespace spmv {
@@ -39,7 +41,7 @@ template <std::size_t threads_per_block,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void __launch_bounds__(threads_per_block, 2)
+__global__ void __launch_bounds__(int(threads_per_block))
     __merge_path_flat(meta_t meta,
                       std::size_t rows,
                       std::size_t cols,
@@ -64,8 +66,6 @@ __global__ void __launch_bounds__(threads_per_block, 2)
   if (!config.is_valid_accessor(map))
     return;
 
-  type_t running_total = 0.0f;
-
 /// Flat Merge-Path loop from 0..items_per_thread.
 #pragma unroll
   for (auto item : config.virtual_idx()) {
@@ -77,7 +77,6 @@ __global__ void __launch_bounds__(threads_per_block, 2)
       atomicAdd(&(y[row]), nonzero);
       map.y++;
     } else {
-      running_total = 0.0f;
       map.x++;
     }
   }
@@ -100,8 +99,8 @@ util::timer_t merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
                               vector_t<type_t>& y,
                               cudaStream_t stream = 0) {
   // Create a schedule.
-  constexpr std::size_t block_size = 128;
-  constexpr std::size_t items_per_thread = 4;
+  constexpr std::size_t block_size = sizeof(type_t) > 4 ? 64 : 128;
+  constexpr std::size_t items_per_thread = sizeof(type_t) > 4 ? 3 : 5;
 
   using preprocessor_t =
       schedule::merge_path::preprocess_t<block_size, items_per_thread, index_t,

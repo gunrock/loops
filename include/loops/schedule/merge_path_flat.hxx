@@ -350,8 +350,8 @@ class setup<algorithms_t::merge_path_flat,
     auto tile_start_coord = buffer.tile_coords[0];
     auto tile_end_coord = buffer.tile_coords[1];
 
-    tile_size_t tile_num_tiles = tile_end_coord.x - tile_start_coord.x;
-    atom_size_t tile_num_nonzeros = tile_end_coord.y - tile_start_coord.y;
+    tile_num_tiles = tile_end_coord.x - tile_start_coord.x;
+    tile_num_atoms = tile_end_coord.y - tile_start_coord.y;
 
     tiles_iterator_t end_offsets = tile_traits_t::begin() + 1;
 
@@ -377,7 +377,7 @@ class setup<algorithms_t::merge_path_flat,
     /// Search across the diagonals to find coordinates to process.
     coord_t thread_start_coord = search::_binary_search(
         atom_size_t(threadIdx.x * items_per_thread), buffer.tile_end_offset,
-        tile_atoms_indices, tile_num_tiles, tile_num_nonzeros);
+        tile_atoms_indices, tile_num_tiles, tile_num_atoms);
 
     __syncthreads();  // Perf-sync
 
@@ -419,10 +419,20 @@ class setup<algorithms_t::merge_path_flat,
     return tiles_counting_it[coord.x];
   }
 
+  __device__ __forceinline__ tile_size_t num_tiles() const {
+    return tile_num_tiles;
+  }
+
+  __device__ __forceinline__ atom_size_t num_atoms() const {
+    return tile_num_atoms;
+  }
+
  private:
   std::size_t total_work;
   std::size_t merge_tile_size;
   std::size_t num_merge_tiles;
+  tile_size_t tile_num_tiles;
+  atom_size_t tile_num_atoms;
 };
 
 }  // namespace schedule
