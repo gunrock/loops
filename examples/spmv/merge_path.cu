@@ -34,12 +34,13 @@ int main(int argc, char** argv) {
   // thrust::fill(x.begin(), x.end(), 2);
 
   // Run the benchmark.
-  util::timer_t timer;
-  timer.start();
-  algorithms::spmv::merge_path_flat(csr, x, y);
-  timer.stop();
-
-  std::cout << "Elapsed (ms):\t" << timer.milliseconds() << std::endl;
+  float elapsed = 0.0f;
+  int num_runs = 1;
+  for (int i = 0; i < num_runs; i++) {
+    auto timer = algorithms::spmv::merge_path_flat(csr, x, y);
+    elapsed += timer.milliseconds();
+  }
+  std::cout << "Elapsed (ms):\t" << elapsed / num_runs << std::endl;
 
   // Validation.
   if (parameters.validate)
