@@ -14,18 +14,20 @@ namespace loops {
 namespace math {
 
 /**
- * @brief Simple safe ceil division: (a + b - 1) / b.
+ * @brief Simple safe ceil division: (a + b - 1) / b. Handles overflow condition
+ * as well.
  *
- * @tparam type_t_t Type of the dividend.
- * @tparam type_u_t Type of the divisor.
- * @param t Dividend.
- * @param u Divisor.
+ * @tparam numerator_t Type of the dividend.
+ * @tparam denominator_t Type of the divisor.
+ * @param n Dividend.
+ * @param d Divisor.
  * @return The quotient.
  */
-template <class type_t_t, class type_u_t>
-__host__ __device__ constexpr auto ceil_div(type_t_t const& t,
-                                            type_u_t const& u) {
-  return (t + u - 1) / u;
+template <class numerator_t, class denominator_t>
+__host__ __device__ __forceinline__ constexpr numerator_t ceil_div(
+    numerator_t const& n,
+    denominator_t const& d) {
+  return static_cast<numerator_t>(n / d + (n % d != 0 ? 1 : 0));
 }
 
 }  // namespace math
