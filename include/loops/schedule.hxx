@@ -21,10 +21,11 @@ namespace schedule {
  *
  */
 enum algorithms_t {
-  work_oriented,  /// < Work oriented scheduling algorithm.
-  thread_mapped,  /// < Thread mapped scheduling algorithm.
-  tile_mapped,    /// < Tile mapped scheduling algorithm.
-  bucketing,      /// < Bucketing scheduling algorithm.
+  merge_path_flat,  /// < Merge-path flat scheduling algorithm.
+  work_oriented,    /// < Work oriented scheduling algorithm.
+  thread_mapped,    /// < Thread mapped scheduling algorithm.
+  group_mapped,     /// < Group mapped scheduling algorithm.
+  bucketing,        /// < Bucketing scheduling algorithm.
 };
 
 template <algorithms_t scheme, typename atoms_t, typename atom_size_t>
@@ -57,5 +58,6 @@ class setup;
 }  // namespace loops
 
 #include <loops/schedule/thread_mapped.hxx>
-#include <loops/schedule/tile_mapped.hxx>
+#include <loops/schedule/group_mapped.hxx>
 #include <loops/schedule/work_oriented.hxx>
+#include <loops/schedule/merge_path_flat.hxx>
