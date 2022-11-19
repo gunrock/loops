@@ -1,0 +1,19 @@
+# Or directly get from docker:
+# docker pull neoblizz/loops:v0.1
+FROM nvidia/cuda:11.7.0-devel-ubuntu20.04
+
+# Install dependencies
+RUN apt-get update
+RUN apt-get install -y build-essential
+RUN apt-get install -y wget vim git gcc g++
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.25.0/cmake-3.25.0-linux-x86_64.sh
+RUN chmod +x ./cmake-3.25.0-linux-x86_64.sh
+RUN mkdir /opt/cmake-3.25.0/
+RUN ./cmake-3.25.0-linux-x86_64.sh --skip-license --prefix=/opt/cmake-3.25.0
+RUN ln -s /opt/cmake-3.25.0/bin/* /usr/local/bin/
+
+
+# Build and install
+RUN git clone https://github.com/gunrock/loops.git
+RUN cd loops && mkdir build && cd build && cmake .. && make -j$(nproc)
