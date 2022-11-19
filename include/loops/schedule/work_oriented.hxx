@@ -13,6 +13,7 @@
 #pragma once
 
 #include <loops/stride_ranges.hxx>
+#include <loops/util/math.hxx>
 
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>
@@ -22,20 +23,6 @@
 
 namespace loops {
 namespace schedule {
-
-/**
- * @brief Simple safe division: (a + b - 1) / b.
- *
- * @tparam type_t_t Type of the dividend.
- * @tparam type_u_t Type of the divisor.
- * @param t Dividend.
- * @param u Divisor.
- * @return The quotient.
- */
-template <class type_t_t, class type_u_t>
-__host__ __device__ constexpr auto div(type_t_t const& t, type_u_t const& u) {
-  return (t + u - 1) / u;
-}
 
 /**
  * @brief Traits for Atom.
@@ -158,7 +145,7 @@ class setup<algorithms_t::work_oriented,
         atom_traits_t(_num_atoms),
         total_work(_num_tiles + _num_atoms),
         num_threads(gridDim.x * threads_per_block),
-        work_per_thread(div(total_work, num_threads)) {}
+        work_per_thread(math::ceil_div(total_work, num_threads)) {}
 
   __device__ __forceinline__ auto init() {
     thrust::counting_iterator<atoms_t> atoms_indices(0);

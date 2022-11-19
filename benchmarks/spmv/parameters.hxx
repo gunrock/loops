@@ -80,9 +80,9 @@ struct parameters_t {
   auto nvbench_argv() { return m_args.data(); }
 
  private:
-  std::string m_filename;
-  cxxopts::Options m_options;
-  std::vector<const char*> m_args;
-  bool m_help = false;
-  int m_argc;
+  std::string m_filename;           ///< Matrix market file.
+  cxxopts::Options m_options;       ///< Command line options.
+  std::vector<const char*> m_args;  ///< Command line arguments.
+  bool m_help = false;              ///< Help flag.
+  int m_argc;                       ///< Number of command line arguments.
 };

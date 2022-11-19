@@ -8,6 +8,8 @@ With our open-source framework, we hope to not only improve programmers' product
 ## Table of contents
 
 - [GitHub actions status.](#wrenchgithub-actions-status)
+- [Getting started.](#rotating_light-getting-started)
+- [Downloading all datasets.](#ledger-datasets)
 - [Background information.](#musical_note-a-little-background)
   - [Where this project fits in and how?](#-a-small-and-important-piece-of-a-larger-puzzle)
   - [Load-balancing problem and a solution.](#%EF%B8%8F-load-balancing-problem-and-a-silver-lining)
@@ -18,10 +20,6 @@ With our open-source framework, we hope to not only improve programmers' product
   - Define and configure load-balancing schedule.
   - Load-balanced ranged loops.
   - User-defined computation.
-- [Beginner API: Load-balanced transformations and primitives.](#beginner-api-load-balanced-transformations-and-primitives) (🚧)
-  - Defining a sparse layout.
-  - User-defined compute using an extended C++ lambda.
-  - Load-balanced primitive (e.g. transform segmented reduce).
 
 ## :wrench:	GitHub actions status.
 
@@ -30,9 +28,38 @@ With our open-source framework, we hope to not only improve programmers' product
 | Ubuntu  | [Ubuntu 20.04](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources)        | 11.7.0 | [![Ubuntu](https://github.com/gunrock/loops/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu.yml)    |
 | Windows | [Windows Server 2019](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources) | 11.7.0 | [![Windows](https://github.com/gunrock/loops/actions/workflows/windows.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows.yml) |
 
+## :rotating_light: Getting Started
+Before building `loops` make sure you have CUDA Toolkit and cmake installed on your system. Other external dependencies such as `NVIDIA/thrust`, `NVIDIA/cub`, etc. are automatically fetched using cmake.
+
+```bash
+git clone https://github.com/gunrock/loops.git
+cd loops
+mkdir build && cd build
+cmake .. 
+make loops.spmv.merge_path # or use: make -j$(nproc)
+bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx
+```
+
+## :ledger: Datasets
+
+To download the SuiteSparse Matrix Collection[^1], simply run the following command. We recommend using a `tmux` session, because downloading the entire collection can take a significant time.
+```bash
+wget --recursive --no-parent --force-directories -l inf -X RB,mat --accept "*.tar.gz" "https://suitesparse-collection-website.herokuapp.com/"
+```
+
+- `--recursive` recursively download
+- `--no-parent` prevent wget from starting to fetch links in the parent of the website
+- `--l inf` keep downloading for an infinite level
+- `-X RB,mat` ignore subdirectories RB and mat, since I am only downloading matrix market MM, you can choose to download any of the others or remove this entirely to download all formats
+- `--accept` accept the following extension only
+- `--force-directories` create a hierarchy of directories, even if one would not have been created otherwise
+
+[^1]: Timothy A. Davis and Yifan Hu. 2011. The University of Florida Sparse Matrix Collection. ACM Transactions on Mathematical Software 38, 1, Article 1 (December 2011), 25 pages. DOI: https://doi.org/10.1145/2049662.2049663
+
 # :musical_note: A little background.
-**DARPA** announced [**Software Defined Hardware (SDH)**](https://www.darpa.mil/program/software-defined-hardware), a program that aims "*to build runtime-reconfigurable hardware and software that enables near ASIC performance without sacrificing programmability for data-intensive algorithms.*" **NVIDIA** leading the charge on the program, internally called, [**Symphony**](https://blogs.nvidia.com/blog/2018/07/24/darpa-research-post-moores-law/). Our work is a small but important piece of this larger puzzle. The "data-intensive algorithms" part of the program includes domains like Machine Learning, Graph Processing, Sparse-Matrix-Vector algorithms, etc. where there is a large amount of data available to be processed. And the problems being addressed are either already based on irregular data structures and workloads, or are trending towards it (such as sparse machine learning problems). For these irregular workload computations to be successful, we require efficient load-balancing schemes targetting specialized hardware such as the GPUs or Symphony.
-- [DARPA Selects Teams to Unleash Power of Specialized, Reconfigurable Computing Hardware](https://www.darpa.mil/news-events/2018-07-24a)
+**DARPA** announced [**Software Defined Hardware (SDH)**](https://www.darpa.mil/program/software-defined-hardware)[^2], a program that aims "*to build runtime-reconfigurable hardware and software that enables near ASIC performance without sacrificing programmability for data-intensive algorithms.*" **NVIDIA** leading the charge on the program, internally called, [**Symphony**](https://blogs.nvidia.com/blog/2018/07/24/darpa-research-post-moores-law/). Our work is a small but important piece of this larger puzzle. The "data-intensive algorithms" part of the program includes domains like Machine Learning, Graph Processing, Sparse-Matrix-Vector algorithms, etc. where there is a large amount of data available to be processed. And the problems being addressed are either already based on irregular data structures and workloads, or are trending towards it (such as sparse machine learning problems). For these irregular workload computations to be successful, we require efficient load-balancing schemes targetting specialized hardware such as the GPUs or Symphony.
+
+[^2]: [DARPA Selects Teams to Unleash Power of Specialized, Reconfigurable Computing Hardware](https://www.darpa.mil/news-events/2018-07-24a)
 
 ## 🧩 A small (and important) piece of a larger puzzle.
 The predominant approach today to addressing irregularity is to build application-dependent solutions. These are not portable between applications. This is a shame because We believe the underlying techniques that are currently used to address irregularity have the potential to be expressed in a generic, portable, powerful way. We build a generic open-source library for load balancing that will expose high-performance, intuitive load-balancing strategies to any irregular-parallel application.
@@ -48,55 +75,10 @@ The simple idea behind our load-balancing abstraction is to represent sparse for
 
 ## ✒️ As function and set notation.
 
-Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: $M = \{ P_{id}, T_i ... T_j \}$, map of processor ids to tiles, and the scheduler responsible for creating the maps: $L(S) = \{ M_0, ..., M_m}$.
+Given a sparse-irregular problem $S$ made of many subsets called tiles, $T$. $T_i$ is defined as a collection of atoms, where an atom is the smallest possible processing element (for example, a nonzero element within a sparse-matrix). Using a scheduler, our abstraction's goal is to create a new set, $M$, which maps the processor ids (thread ids for a given kernel execution) $P_{id}$ to a group of subsets of $T$: $M = \{ P_{id}, T_i ... T_j \}$, map of processor ids to tiles, and the scheduler responsible for creating the maps: $L(S) = \{ M_0, ..., M_m\}$.
 
 ## 🧫 As three domains: data, schedule and computation.
 ![illustration](https://user-images.githubusercontent.com/9790745/168728299-6b125b44-894a-49bb-92fd-ee85aaa80ae4.png)
-
-We provide two APIs for our library, one that focuses on a beginner-friendly approach to load-balancing irregular sparse computations and another that allows advanced programmers to retain control of the GPU kernels and express load-balanced execution as ranged loops. Both approaches are highlighted below.
-
-## Beginner API: Load-balanced transformations and primitives.
-
-> 🚧 Beginner APIs are heavily in development as they require segmented primitives to be implemented using the composable APIs. If you're interested in a primitive please file an issue. The main contribution of our abstraction focuses on the composable APIs, which we believe to be a more scalable and performant solution.
-
-Our Load-balanced execution API builds on the approach defined in `gunrock/essentials` where we identify key primitives used in computing sparse linear algebra, graph analytics, and other irregular computations alike. Load-balanced versions of these primitives are then implemented, such that the user gets access to the atom, tile, and processor id they are working on as the [C++ lambda](https://en.cppreference.com/w/cpp/language/lambda) signature.
-
-Users define their computation within the C++ lambda, which gets called by the load-balanced primitive for every instance of the work atom.
-
-### (1) Defining a sparse layout.
-In this simple example we are using Compressed Sparse Row (CSR) format and simply returning the number of `atoms` (nonzeros) in each row as our layout.
-```cpp
-auto layout = [=] __device__ (std::size_t tile_id) {
-  return offsets[tile_id+1] – offsets[tile_id];
-}
-```
-
-### (2) User-defined compute using an extended C++ lambda.
-
-```cpp
-// user-defined compute: y = Ax
-auto spmv = [=] __host__ __device__ (std::size_t atom_id, 
-                                    std::size_t tile_id, 
-                                    std::size_t proc_id) {
-  return values[atom_id] * 	x[column_indices[atom_id]];
-}
-```
-
-### (3) Load-balanced primitive (e.g. transform segmented reduce).
-Requires the load-balancing schedule (`work_oriented` in this example) as a templated parameter.
-The transformation as a C++ lambda expressions (`spmv`) and the `layout` as an input to perform a segmented reduction.
-The output of the C++ lambda expression gets reduced by segments defined using `A.offsets`.
-```cpp
-lb::transform_segreduce<lb::work_oriented>
-                       (spmv, layout, A.nonzeros, A.offsets,
-                        G.rows, y, lb::plus_t(),
-                        0.0f, stream);
-```
-
-| Advantages                                                                      | Disadvantages                                                                                                           |
-|---------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| Requires no knowledge of how to implement segmented reduction.                  | No control over kernel execution and dispatch configuration.                                                            |
-| Very simple API if the computation can be defined using C++ lambda expressions. | No composability; cannot implement more complicated computations that may have cooperative properties among processors. |
 
 ## Composable API: Load-balanced loops.
 

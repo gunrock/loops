@@ -1,5 +1,5 @@
 /**
- * @file group_mapped.cu
+ * @file merge_path.cu
  * @author Muhammad Osama (mosama@ucdavis.edu)
  * @brief Sparse Matrix-Vector Multiplication example.
  * @version 0.1
@@ -10,7 +10,7 @@
  */
 
 #include "helpers.hxx"
-#include <loops/algorithms/spmv/group_mapped.cuh>
+#include <loops/algorithms/spmv/merge_path_flat.cuh>
 
 using namespace loops;
 
@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
 
   // ... I/O parameters, mtx, etc.
   parameters_t parameters(argc, argv);
+
   matrix_market_t<index_t, offset_t, type_t> mtx;
   csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
 
@@ -30,14 +31,16 @@ int main(int argc, char** argv) {
 
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  // thrust::fill(x.begin(), x.end(), 2);
 
   // Run the benchmark.
-  util::timer_t timer;
-  timer.start();
-  algorithms::spmv::group_mapped(csr, x, y);
-  timer.stop();
-
-  std::cout << "Elapsed (ms):\t" << timer.milliseconds() << std::endl;
+  float elapsed = 0.0f;
+  int num_runs = 1;
+  for (int i = 0; i < num_runs; i++) {
+    auto timer = algorithms::spmv::merge_path_flat(csr, x, y);
+    elapsed += timer.milliseconds();
+  }
+  std::cout << "Elapsed (ms):\t" << elapsed / num_runs << std::endl;
 
   // Validation.
   if (parameters.validate)
