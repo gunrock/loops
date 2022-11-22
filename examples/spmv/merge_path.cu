@@ -40,7 +40,9 @@ int main(int argc, char** argv) {
     auto timer = algorithms::spmv::merge_path_flat(csr, x, y);
     elapsed += timer.milliseconds();
   }
-  std::cout << "Elapsed (ms):\t" << elapsed / num_runs << std::endl;
+
+  std::cout << "merge_path_flat," << mtx.dataset << "," << csr.rows << ","
+            << csr.cols << "," << csr.nnzs << "," << elapsed << std::endl;
 
   // Validation.
   if (parameters.validate)

@@ -1,0 +1,5 @@
+altair
+numpy
+pandas
+vega_datasets
+altair_saver
