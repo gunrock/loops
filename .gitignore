@@ -39,3 +39,6 @@ build
 
 # Ignore external fetched content
 externals/*
+
+# Ignore checkpoints ipynb
+*/*.ipynb_checkpoints/*
