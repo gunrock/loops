@@ -37,7 +37,9 @@ int main(int argc, char** argv) {
   algorithms::spmv::group_mapped(csr, x, y);
   timer.stop();
 
-  std::cout << "Elapsed (ms):\t" << timer.milliseconds() << std::endl;
+  std::cout << "group_mapped," << mtx.dataset << "," << csr.rows << ","
+            << csr.cols << "," << csr.nnzs << "," << timer.milliseconds()
+            << std::endl;
 
   // Validation.
   if (parameters.validate)
