@@ -74,6 +74,7 @@ Dimensions:     39 x 39 (340)
 Errors:         0
 ```
 ### To run the complete analysis.
+0. Find pre-generated results in [docs/](https://github.com/gunrock/loops/blob/main/docs/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
 1. Download the [datasets](#datasets), this may take several hours depending on your internet connection and suitesparse matrix collection's website bandwidth. 
 2. Uncompress the dataset by running the following command in the dataset's directory `find . -name '*.tar.gz' -execdir tar -xzvf '{}' \;
 ` The total downloaded size of the dataset (uncompressed + compressed) is 887GB.
