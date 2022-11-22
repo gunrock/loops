@@ -38,7 +38,8 @@ int main(int argc, char** argv) {
   algorithms::spmv::original(csr, x, y);
   timer.stop();
 
-  std::cout << "Elapsed (ms):\t" << timer.milliseconds() << std::endl;
+  std::cout << "original," << mtx.dataset << "," << csr.rows << "," << csr.cols
+            << "," << csr.nnzs << "," << timer.milliseconds() << std::endl;
 
   // Validation.
   if (parameters.validate)
