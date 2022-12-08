@@ -15,7 +15,7 @@
 #include <string>
 #include <limits>
 
-#include <loops/container/detail/mmio.hxx>
+#include <loops/container/detail/mmio_impl.hxx>
 
 #include <loops/util/filepath.hxx>
 #include <loops/container/formats.hxx>

@@ -8,6 +8,10 @@ set(SOURCES
 )
 
 foreach(SOURCE IN LISTS SOURCES)
+  set_source_files_properties(${SOURCE} 
+    PROPERTIES 
+      LANGUAGE HIP
+  )
   get_filename_component(TEST_NAME ${SOURCE} NAME_WLE)
   string(PREPEND TEST_NAME "loops.spmv.")
   add_executable(${TEST_NAME} ${SOURCE})
@@ -18,8 +22,8 @@ foreach(SOURCE IN LISTS SOURCES)
   set_target_properties(${TEST_NAME}
     PROPERTIES
       CXX_STANDARD 17
-      CUDA_STANDARD 17
-      CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES}
+      HIP_STANDARD 17
+      HIP_ARCHITECTURES ${CMAKE_HIP_ARCHITECTURES}
   )
   
   message(STATUS "Example Added: ${TEST_NAME}")
