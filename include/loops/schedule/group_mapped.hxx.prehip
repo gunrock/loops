@@ -22,7 +22,7 @@
 #define _CG_ABI_EXPERIMENTAL
 #endif
 
-#include <hip/hip_cooperative_groups.h>
+#include <cooperative_groups.h>
 #include <cooperative_groups/scan.h>
 
 namespace loops {

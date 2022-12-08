@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 /**
  * @file saxpy.cu
  * @author Muhammad Osama (mosama@ucdavis.edu)

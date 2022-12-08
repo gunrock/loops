@@ -21,7 +21,7 @@ typedef int device_id_t;
  * @param ordinal device id.
  */
 void set(device_id_t ordinal) {
-  hipSetDevice(ordinal);
+  cudaSetDevice(ordinal);
 }
 
 /**
@@ -31,7 +31,7 @@ void set(device_id_t ordinal) {
  */
 device_id_t get() {
   device_id_t ordinal;
-  hipGetDevice(&ordinal);
+  cudaGetDevice(&ordinal);
   return ordinal;
 }
 
@@ -40,12 +40,12 @@ device_id_t get() {
  *
  */
 struct properties_t {
-  typedef hipDeviceProp_t device_properties_t;
+  typedef cudaDeviceProp device_properties_t;
   device_properties_t properties;
   device_id_t ordinal;
 
   properties_t() : ordinal(device::get()) {
-    hipGetDeviceProperties(&properties, ordinal);
+    cudaGetDeviceProperties(&properties, ordinal);
   }
 
   int multi_processor_count() { return properties.multiProcessorCount; }

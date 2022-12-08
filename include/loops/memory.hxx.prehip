@@ -23,10 +23,10 @@ namespace memory {
  * @brief memory space; cuda (device) or host.
  * Can be extended to support uvm and multi-gpu.
  *
- * @todo change this enum to support hipMemoryType
- * (see ref;  std::underlying_type<hipMemoryType>::type)
+ * @todo change this enum to support cudaMemoryType
+ * (see ref;  std::underlying_type<cudaMemoryType>::type)
  * instead of some random enums, we can rely
- * on hipMemoryTypeHost/Device/Unregistered/Managed
+ * on cudaMemoryTypeHost/Device/Unregistered/Managed
  * for this.
  *
  */

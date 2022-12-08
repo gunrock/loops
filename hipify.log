@@ -1,0 +1,127 @@
+find . -type f \( -iname \*.cu -o -iname \*.cuh -o -iname \*.cpp -o -iname \*.hpp -o -iname \*.hxx -o -iname *.cxx \) -exec hipify-perl -inplace -experimental -print-stats {} \;
+
+[HIPIFY] info: file './include/loops/error.hxx' statisitics:
+  CONVERTED refs count: 6
+  TOTAL lines of code: 48
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaError_t => hipError_t: 2
+  cudaGetErrorString => hipGetErrorString: 1
+  cudaSuccess => hipSuccess: 2
+  cuda_runtime_api.h => hip/hip_runtime_api.h: 1
+
+[HIPIFY] info: file './include/loops/schedule/merge_path_flat.hxx' statisitics:
+  CONVERTED refs count: 6
+  TOTAL lines of code: 438
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaDevAttrMultiProcessorCount => hipDeviceAttributeMultiprocessorCount: 1
+  cudaDeviceGetAttribute => hipDeviceGetAttribute: 1
+  cudaStream_t => hipStream_t: 1
+
+[HIPIFY] info: file './include/loops/schedule/group_mapped.hxx' statisitics:
+  CONVERTED refs count: 1
+  TOTAL lines of code: 240
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cooperative_groups.h => hip/hip_cooperative_groups.h: 1
+
+[HIPIFY] info: file './include/loops/util/device.hxx' statisitics:
+  CONVERTED refs count: 4
+  TOTAL lines of code: 54
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaDeviceProp => hipDeviceProp_t: 1
+  cudaGetDevice => hipGetDevice: 1
+  cudaGetDeviceProperties => hipGetDeviceProperties: 1
+  cudaSetDevice => hipSetDevice: 1
+
+[HIPIFY] info: file './include/loops/util/timer.hxx' statisitics:
+  CONVERTED refs count: 11
+  TOTAL lines of code: 54
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaEventCreate => hipEventCreate: 2
+  cudaEventDestroy => hipEventDestroy: 2
+  cudaEventElapsedTime => hipEventElapsedTime: 1
+  cudaEventRecord => hipEventRecord: 3
+  cudaEventSynchronize => hipEventSynchronize: 1
+  cudaEvent_t => hipEvent_t: 1
+  cuda_runtime.h => hip/hip_runtime.h: 1
+
+[HIPIFY] info: file './include/loops/util/equal.hxx' statisitics:
+  CONVERTED refs count: 2
+  TOTAL lines of code: 64
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaMemcpy => hipMemcpy: 1
+  cudaMemcpyDeviceToHost => hipMemcpyDeviceToHost: 1
+  warning: ./include/loops/util/launch.hxx:42: removed identifier "cudaLaunch" since CUDA 10.1
+
+[HIPIFY] info: file './include/loops/util/launch.hxx' statisitics:
+  CONVERTED refs count: 4
+  TOTAL lines of code: 75
+  WARNINGS: 1
+[HIPIFY] info: CONVERTED refs by names:
+  cuda.h => hip/hip_runtime.h: 1
+  cudaLaunchCooperativeKernel => hipLaunchCooperativeKernel: 1
+  cudaStream_t => hipStream_t: 2
+
+[HIPIFY] info: file './include/loops/memory.hxx' statisitics:
+  CONVERTED refs count: 3
+  TOTAL lines of code: 69
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaMemoryType => hipMemoryType: 2
+  cudaMemoryTypeHost => hipMemoryTypeHost: 1
+
+[HIPIFY] info: file './include/loops/algorithms/spmv/group_mapped.cuh' statisitics:
+  CONVERTED refs count: 3
+  TOTAL lines of code: 108
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
+
+[HIPIFY] info: file './include/loops/algorithms/spmv/thread_mapped.cuh' statisitics:
+  CONVERTED refs count: 2
+  TOTAL lines of code: 94
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
+
+[HIPIFY] info: file './include/loops/algorithms/spmv/work_oriented.cuh' statisitics:
+  CONVERTED refs count: 4
+  TOTAL lines of code: 116
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
+
+[HIPIFY] info: file './include/loops/algorithms/spmv/original.cuh' statisitics:
+  CONVERTED refs count: 2
+  TOTAL lines of code: 79
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
+  warning: ./include/loops/algorithms/spmv/merge_path_flat.cuh:119: unsupported identifier "cudaDevAttrMax"
+
+[HIPIFY] info: file './include/loops/algorithms/spmv/merge_path_flat.cuh' statisitics:
+  CONVERTED refs count: 6
+  TOTAL lines of code: 142
+  WARNINGS: 1
+[HIPIFY] info: CONVERTED refs by names:
+  cudaDevAttrMaxGridDimX => hipDeviceAttributeMaxGridDimX: 1
+  cudaDeviceGetAttribute => hipDeviceGetAttribute: 1
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
+
+[HIPIFY] info: file './include/loops/algorithms/spmm/thread_mapped.cuh' statisitics:
+  CONVERTED refs count: 2
+  TOTAL lines of code: 93
+  WARNINGS: 0
+[HIPIFY] info: CONVERTED refs by names:
+  cudaStreamSynchronize => hipStreamSynchronize: 1
+  cudaStream_t => hipStream_t: 1
