@@ -5,6 +5,7 @@ set(SOURCES
   group_mapped.cu
   work_oriented.cu
   merge_path.cu
+  rocsparse.cu
 )
 
 foreach(SOURCE IN LISTS SOURCES)

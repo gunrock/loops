@@ -44,6 +44,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/FetchColors.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchThrustCUB.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchModernGPU.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchCXXOpts.cmake)
+# include(${PROJECT_SOURCE_DIR}/cmake/FetchROCSparse.cmake)
 # end /* Include cmake modules */
 
 ## Set the directory where the binaries will be stored
@@ -75,7 +76,7 @@ add_library(loops INTERFACE)
 ## HIP_ARCHITECTURES property from loops project.
 ## see: get_target_properties()
 # message(STATUS "${Magenta}Set SM Architecture using -DCMAKE_HIP_ARCHITECTURES=75,80${ColourReset}")
-set(CMAKE_HIP_ARCHITECTURES gfx900)
+set(CMAKE_HIP_ARCHITECTURES gfx908)
 
 ####################################################
 ############### SET TARGET PROPERTIES ##############
@@ -140,6 +141,7 @@ target_link_directories(loops
 target_link_libraries(loops
   # INTERFACE hip
   INTERFACE rocrand
+  INTERFACE rocsparse
 )
 
 ####################################################
@@ -167,19 +169,25 @@ set(CXX_FLAGS
     # -Werror
     # -vvv
   >
+  $<$<CXX_COMPILER_ID:CLANG>:
+    -Wno-everything
+  >
 )
 
-set(HIP_FLAGS
-  # --expt-extended-lambda 
-  # --expt-relaxed-constexpr
-  # --use_fast_math
-  # --ptxas-options -v
-  # --generate-line-info
-  --offload-arch=gfx900
-  $<$<CXX_COMPILER_ID:GNU>:-O3> # Host optimize-level
+set(CUDA_FLAGS
+  --expt-extended-lambda 
+  --expt-relaxed-constexpr
+  --use_fast_math
+  --ptxas-options -v
+  --generate-line-info
   # --verbose
   # --debug # Host debug
   # --device-debug # Device debug
+)
+
+set(HIP_FLAGS
+  # See: https://github.com/RadeonOpenCompute/rocminfo/blob/master/rocm_agent_enumerator#L12
+  --offload-arch=gfx908
 )
 
 ####################################################

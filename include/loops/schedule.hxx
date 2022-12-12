@@ -58,6 +58,9 @@ class setup;
 }  // namespace loops
 
 #include <loops/schedule/thread_mapped.hxx>
-#include <loops/schedule/group_mapped.hxx>
 #include <loops/schedule/work_oriented.hxx>
 #include <loops/schedule/merge_path_flat.hxx>
+
+#ifdef __HIP_PLATFORM_NVIDIA__
+  #include <loops/schedule/group_mapped.hxx>
+#endif
