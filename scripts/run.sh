@@ -25,6 +25,6 @@ do
     fi
     ((i++))
     echo $BINARY/$EXE_PREFIX.${SPMV[$i]} -m $DATASET_DIR/$DATA
-    # timeout 60 $BINARY/$EXE_PREFIX.${SPMV[$i]} -m $DATASET_DIR/$DATA >> spmv_log.${SPMV[$i]}.csv 
+    timeout 60 $BINARY/$EXE_PREFIX.${SPMV[$i]} -m $DATASET_DIR/$DATA >> spmv_log.${SPMV[$i]}.csv 
     done < "$DATASET_FILES_NAMES"
 done
