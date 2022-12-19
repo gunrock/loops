@@ -9,7 +9,7 @@ With our open-source framework, we hope to not only improve programmers' product
 - **OS:** Ubuntu 18.04, 20.04, Windows
 - **Hardware:** NVIDIA GPU (Volta or newer)
 - **Software:** CUDA 11.7 or above and cmake 3.20.1 or above.
-- **CUDA Architecture:** SM 70 or above (see [GPUs supported](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)), this is specified using cmake's command: `-DCMAKE_CUDA_ARCHITECTURES=70`.
+- **CUDA Architecture:** SM 70 or above (see [GPUs supported](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)), this is specified using cmake's command: `-DCMAKE_CUDA_ARCHITECTURES=70`. Alternatively, set the CUDA architecture version in the `CMakeLists.txt` file directly: [CMakeLists.txt#72](https://github.com/gunrock/loops/blob/main/CMakeLists.txt#L72).
 
 ## Getting Started
 Before building `loops` make sure you have CUDA Toolkit and cmake installed on your system, and exported in `PATH` of your system. Other external dependencies such as `NVIDIA/thrust`, `NVIDIA/cub`, etc. are automatically fetched using cmake.
@@ -76,8 +76,8 @@ Errors:         0
 ## Reproducing Results
 > Find pre-generated results in [docs/](https://github.com/gunrock/loops/blob/main/docs/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
 
-1. In the run script, update the `DATASET_DIR` to point to the path of all the downloaded datasets (root directory, could be something like `MM`, and inside it has subdirectories with `.mtx` files): [scripts/run.sh](https://github.com/gunrock/loops/blob/main/scripts/run.sh)
-2. Fire up the complete run, `./run.sh`, note one complete run can take up to 3 days (goes over the entire suitesparse matrix collection dataset four times with four different algorithms, the main bottleneck is loading files from disk.)
+1. In the run script, update the `DATASET_DIR` to point to the path of all the downloaded datasets (set to the path of the directory containing `MM` directory, and inside the `MM` it has subdirectories with `.mtx` files): [scripts/run.sh](https://github.com/gunrock/loops/blob/main/scripts/run.sh). Additionally, you may change the path to `DATASET_FILES_NAME` containing the list of all the datasets (default points to [datasets/suitesparse.txt](https://github.com/gunrock/loops/blob/main/datasets/suitesparse.txt)).
+2. Fire up the complete run using `run.sh` found in `scripts` directory, `cd scripts && ./run.sh`, note one complete run can take up to 3 days (goes over the entire suitesparse matrix collection dataset four times with four different algorithms, the main bottleneck is loading files from disk.)
 3. **Warning!** Some runs on the matrices are expected to fail as they are not in proper MatrixMarket Format although labeled as `.mtx`. These matrices and the ones that do not fit on the GPU will result in runtime exceptions or `offset_t` type overflow and can be safely ignored.
 4. To run *N* number of datasets simply adjust the stop condition here (default set to `10`): [scripts/run.sh#L22](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22), or remove this if-condition entirely to run on all available `.mtx` files: [scripts/run.sh#L22-L26](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22-L26).
 
