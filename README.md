@@ -89,3 +89,34 @@ merge-path,144,144649,144649,2148786,0.0720215
 merge-path,08blocks,300,300,592,0.0170898
 merge-path,1138_bus,1138,1138,4054,0.0200195
 ```
+
+## How to Cite Loops
+Thank you for citing our work.
+
+```bibtex
+@inproceedings{Osama:2023:APM,
+  author =	 {Muhammad Osama and Serban D. Porumbescu and John D. Owens},
+  title =	 {A Programming Model for {GPU} Load Balancing},
+  booktitle =	 {Proceedings of the 28th ACM SIGPLAN Symposium on
+                  Principles and Practice of Parallel Programming},
+  series =	 {PPoPP 2023},
+  year =	 2023,
+  month =	 feb # "\slash " # mar,
+  acceptance =	 {31 of 131 submissions, 23.7\%},
+  code =	 {https://github.com/gunrock/loops},
+  doi =          {10.1145/3572848.3577434},
+}
+```
+
+```bibtex
+@software{Osama:2022:LAP:Code,
+  author       = {Muhammad Osama and Serban D. Porumbescu and John D. Owens},
+  title        = {Loops: A Programming Model for GPU Load Balancing},
+  month        = dec,
+  year         = 2022,
+  publisher    = {Zenodo},
+  version      = {v0.1.0-alpha},
+  doi          = {10.5281/zenodo.7465053},
+  url          = {https://doi.org/10.5281/zenodo.7465053}
+}
+```
