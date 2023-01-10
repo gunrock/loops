@@ -31,15 +31,23 @@ int main(int argc, char** argv) {
 
   // Generate random numbers between [0, 1].
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  
+  // Warm-up run.
+  algorithms::spmv::thread_mapped(csr, x, y);
 
   // Run the benchmark.
   util::timer_t timer;
   timer.start();
-  algorithms::spmv::thread_mapped(csr, x, y);
+  // Compute y = Ax
+  int num_runs = 100;
+  for (auto i = 0; i < num_runs; ++i) {
+    algorithms::spmv::thread_mapped(csr, x, y);
+  }
   timer.stop();
+  double time = timer.milliseconds()/num_runs;
 
   std::cout << "thread_mapped," << mtx.dataset << "," << csr.rows << ","
-            << csr.cols << "," << csr.nnzs << "," << timer.milliseconds()
+            << csr.cols << "," << csr.nnzs << "," << std::fixed << std::setprecision(6) << time
             << std::endl;
 
   // Validation.
