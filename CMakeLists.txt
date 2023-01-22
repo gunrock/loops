@@ -14,18 +14,29 @@
 # ./cmake-[x.xx.x]-linux-x86_64.sh
 # sudo mv cmake-[x.xx.x]-linux-x86_64 /opt/cmake
 # sudo ln -s /opt/cmake/bin/* /usr/local/bin/
-cmake_minimum_required(VERSION 3.20.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-# begin /* Update Loops version */
-set(LOOPS_VERSION_MAJOR 2)
-set(LOOPS_VERSION_MINOR 0)
-set(LOOPS_VERSION_PATCH 0)
-# end /* Update Loops version */
-
-set(LOOPS_VERSION "${LOOPS_VERSION_MAJOR}.${LOOPS_VERSION_MINOR}.${LOOPS_VERSION_PATCH}")
+# Select "Release" as the default build type.
+# This can be altered by setting -DCMAKE_BUILD_TYPE
+# in the command-line interface to Release or Debug.
+# No reason to set CMAKE_CONFIGURATION_TYPES if it's 
+# not a multiconfig generator. Also no reason mess 
+# with CMAKE_BUILD_TYPE if it's a multiconfig generator.
+# https://stackoverflow.com/a/31548693/5729690
+get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(isMultiConfig)
+    set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE) 
+else()
+    if(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "Defaulting to Release build type")
+        set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+    endif()
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose the type of build")
+    # set the valid options for cmake-gui drop-down list
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release")
+endif()
 
 project(loops
-  VERSION ${LOOPS_VERSION}
   LANGUAGES CXX C CUDA
 )
 
@@ -36,7 +47,6 @@ set(PROJECT_DEPS_DIR externals)
 # begin /* Include cmake modules */
 include(${PROJECT_SOURCE_DIR}/cmake/FetchColors.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchThrustCUB.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/FetchModernGPU.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/FetchCXXOpts.cmake)
 # end /* Include cmake modules */
 
@@ -68,7 +78,6 @@ add_library(loops INTERFACE)
 ## Can be used for applications by extracting the
 ## CUDA_ARCHITECTURES property from loops project.
 ## see: get_target_properties()
-message(STATUS "${Magenta}Set SM Architecture using -DCMAKE_CUDA_ARCHITECTURES=75,80${ColourReset}")
 set(CMAKE_CUDA_ARCHITECTURES 75)
 
 ####################################################
@@ -116,8 +125,6 @@ target_include_directories(loops
   INTERFACE ${CXXOPTS_INCLUDE_DIR}
   INTERFACE ${CUB_INCLUDE_DIR}
   INTERFACE ${THRUST_INCLUDE_DIR}
-  INTERFACE ${MODERNGPU_INCLUDE_DIR}
-  # INTERFACE ${RAPIDJSON_INCLUDE_DIR}
   INTERFACE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
 
@@ -156,24 +163,27 @@ set(CXX_FLAGS
   >
 )
 
-set(CUDA_FLAGS
+set(CUDA_RELEASE_FLAGS
   --expt-extended-lambda 
   --expt-relaxed-constexpr
   --use_fast_math
+)
+
+set(CUDA_DEBUG_FLAGS
+  --expt-extended-lambda 
+  --expt-relaxed-constexpr
   --ptxas-options -v
-  --generate-line-info
-  $<$<CXX_COMPILER_ID:GNU>:-O3> # Host optimize-level
-  # --verbose
-  # --debug # Host debug
-  # --device-debug # Device debug
+  --debug # Host debug
+  --device-debug # Device debug
 )
 
 ####################################################
 ############ TARGET COMPILE OPTIONS ################
 ####################################################
 target_compile_options(loops INTERFACE 
-  $<$<COMPILE_LANGUAGE:CXX>:${CXX_FLAGS}>
-  $<$<COMPILE_LANGUAGE:CUDA>:${CUDA_FLAGS}>
+  $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:${CXX_FLAGS}>
+  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:DEBUG>>:${CUDA_DEBUG_FLAGS}>
+  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:RELEASE>>:${CUDA_RELEASE_FLAGS}>
 )
 
 ####################################################
