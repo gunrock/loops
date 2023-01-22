@@ -1,6 +1,6 @@
 /**
  * @file range.hxx
- * @brief Code is based on Mark Harris' work: 
+ * @brief Code is based on Mark Harris' work:
  * https://github.com/harrism/cpp11-range/blob/master/range.hpp
  * @version 0.1
  * @date 2022-02-02
@@ -52,7 +52,8 @@ struct range_iter_base : std::iterator<std::input_iterator_tag, type_t> {
 template <typename type_t>
 struct range_proxy {
   struct iter : detail::range_iter_base<type_t> {
-    __host__ __device__ iter(type_t current) : detail::range_iter_base<type_t>(current) {}
+    __host__ __device__ iter(type_t current)
+        : detail::range_iter_base<type_t>(current) {}
   };
 
   struct step_range_proxy {
@@ -98,7 +99,8 @@ struct range_proxy {
     iter end_;
   };
 
-  __host__ __device__ range_proxy(type_t begin, type_t end) : begin_(begin), end_(end) {}
+  __host__ __device__ range_proxy(type_t begin, type_t end)
+      : begin_(begin), end_(end) {}
 
   __host__ __device__ step_range_proxy step(type_t step) {
     return {*begin_, *end_, step};
@@ -126,7 +128,8 @@ struct infinite_range_proxy {
 
   struct step_range_proxy {
     struct iter : detail::range_iter_base<type_t> {
-      __host__ __device__ iter(type_t current = type_t(), type_t step = type_t())
+      __host__ __device__ iter(type_t current = type_t(),
+                               type_t step = type_t())
           : detail::range_iter_base<type_t>(current), step(step) {}
 
       using detail::range_iter_base<type_t>::current;
@@ -190,8 +193,8 @@ namespace traits {
 template <typename C>
 struct has_size {
   template <typename type_t>
-  static constexpr auto check(type_t*) ->
-      typename std::is_integral<decltype(std::declval<type_t const>().size())>::type;
+  static constexpr auto check(type_t*) -> typename std::is_integral<
+      decltype(std::declval<type_t const>().size())>::type;
 
   template <typename>
   static constexpr auto check(...) -> std::false_type;
@@ -215,8 +218,8 @@ __host__ __device__ range_proxy<std::size_t> indices(type_t (&)[N]) {
 }
 
 template <typename type_t>
-range_proxy<typename std::initializer_list<type_t>::size_type> __host__ __device__
-indices(std::initializer_list<type_t>&& cont) {
+range_proxy<typename std::initializer_list<type_t>::size_type>
+    __host__ __device__ indices(std::initializer_list<type_t>&& cont) {
   return {0, cont.size()};
 }
 }  // namespace loops
