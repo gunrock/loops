@@ -29,7 +29,11 @@ namespace loops {
 namespace schedule {
 
 namespace cg = cooperative_groups;
+#if CUDART_VERSION >= 12000
+namespace cg_x = cg;
+#else
 namespace cg_x = cooperative_groups::experimental;
+#endif
 
 template <typename atoms_type, typename atom_size_type>
 class atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type> {
@@ -112,7 +116,11 @@ class setup<algorithms_t::group_mapped,
 
   /// Temporary storage buffer for schedule algorithm.
   struct __align__(32) storage_t {
+#if CUDART_VERSION >= 12000
+    cg_x::block_tile_memory<threads_per_block> groups;
+#else
     cg_x::block_tile_memory<4, threads_per_block> groups;
+#endif
     atoms_t tile_aggregates[threads_per_block / threads_per_tile];
     atoms_t atoms_offsets[threads_per_block];
     tiles_t tiles_indices[threads_per_block];
@@ -233,8 +241,11 @@ using warp_mapped =
     setup<algorithms_t::group_mapped, threads_per_block, 32, tiles_t, atoms_t>;
 
 template <std::size_t threads_per_block, typename tiles_t, typename atoms_t>
-using block_mapped =
-    setup<algorithms_t::group_mapped, threads_per_block, 32, tiles_t, atoms_t>;
+using block_mapped = setup<algorithms_t::group_mapped,
+                           threads_per_block,
+                           threads_per_block,
+                           tiles_t,
+                           atoms_t>;
 
 }  // namespace schedule
 }  // namespace loops
