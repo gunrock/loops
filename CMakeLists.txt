@@ -206,7 +206,7 @@ endif(LOOPS_BUILD_TESTS)
 ####################################################
 option(LOOPS_BUILD_BENCHMARKS
   "If on, builds loops with benchmarking support."
-  ON)
+  OFF)
 
 # Subdirectories for examples, testing and documentation
 if(LOOPS_BUILD_BENCHMARKS)
