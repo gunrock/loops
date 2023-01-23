@@ -1,6 +1,6 @@
 # 🐧 `loops`: Expressing Parallel Irregular Computations
 
-[![Ubuntu](https://github.com/gunrock/loops/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu.yml) [![Windows](https://github.com/gunrock/loops/actions/workflows/windows.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7465053.svg)](https://doi.org/10.5281/zenodo.7465053)
+[![ubuntu-20.04](https://github.com/gunrock/loops/actions/workflows/ubuntu-20.04.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu-20.04.yml) [![ubuntu-22.04](https://github.com/gunrock/loops/actions/workflows/ubuntu-22.04.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu-22.04.yml) [![windows-2019](https://github.com/gunrock/loops/actions/workflows/windows-2019.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows-2019.yml) [![windows-2022](https://github.com/gunrock/loops/actions/workflows/windows-2022.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows-2022.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7465053.svg)](https://doi.org/10.5281/zenodo.7465053)
 
 We propose an open-source GPU load-balancing framework for applications that exhibit irregular parallelism. The set of applications and algorithms we consider are fundamental to computing tasks ranging from sparse machine learning, large numerical simulations, and on through to graph analytics. The underlying data and data structures that drive these applications present access patterns that naturally don't map well to the GPU's architecture that is designed with dense and regular patterns in mind. 
 
@@ -77,14 +77,14 @@ Dimensions:     39 x 39 (340)
 Errors:         0
 ```
 ## Reproducing Results
-> Find pre-generated results in [docs/](https://github.com/gunrock/loops/blob/main/docs/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
+> Find pre-generated results in [plots/](https://github.com/gunrock/loops/blob/main/plots/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
 
 1. In the run script, update the `DATASET_DIR` to point to the path of all the downloaded datasets (set to the path of the directory containing `MM` directory, and inside the `MM` it has subdirectories with `.mtx` files): [scripts/run.sh](https://github.com/gunrock/loops/blob/main/scripts/run.sh). Additionally, you may change the path to `DATASET_FILES_NAME` containing the list of all the datasets (default points to [datasets/suitesparse.txt](https://github.com/gunrock/loops/blob/main/datasets/suitesparse.txt)).
 2. Fire up the complete run using `run.sh` found in `scripts` directory, `cd scripts && ./run.sh`, note one complete run can take up to 3 days (goes over the entire suitesparse matrix collection dataset four times with four different algorithms, the main bottleneck is loading files from disk.)
 3. **Warning!** Some runs on the matrices are expected to fail as they are not in proper MatrixMarket Format although labeled as `.mtx`. These matrices and the ones that do not fit on the GPU will result in runtime exceptions or `offset_t` type overflow and can be safely ignored.
 4. To run *N* number of datasets simply adjust the stop condition here (default set to `10`): [scripts/run.sh#L22](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22), or remove this if-condition entirely to run on all available `.mtx` files: [scripts/run.sh#L22-L26](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22-L26).
 
-Expected output from the above runs are `csv` files in the same directory as the `run.sh`, these can replace the existing `csv` files within `docs/data`, and a [python jupyter notebook](https://jupyter.org/install) can be fired up to evaluate the results. Python notebook includes instructions on generating plots. See sample output of one of the `csv` files below:
+Expected output from the above runs are `csv` files in the same directory as the `run.sh`, these can replace the existing `csv` files within `plots/data`, and a [python jupyter notebook](https://jupyter.org/install) can be fired up to evaluate the results. Python notebook includes instructions on generating plots. See sample output of one of the `csv` files below:
 
 ```csv
 kernel,dataset,rows,cols,nnzs,elapsed
