@@ -98,16 +98,16 @@ Thank you for citing our work.
 
 ```bibtex
 @inproceedings{Osama:2023:APM,
-  author =	 {Muhammad Osama and Serban D. Porumbescu and John D. Owens},
-  title =	 {A Programming Model for {GPU} Load Balancing},
-  booktitle =	 {Proceedings of the 28th ACM SIGPLAN Symposium on
+  author       = {Muhammad Osama and Serban D. Porumbescu and John D. Owens},
+  title        = {A Programming Model for {GPU} Load Balancing},
+  booktitle    = {Proceedings of the 28th ACM SIGPLAN Symposium on
                   Principles and Practice of Parallel Programming},
-  series =	 {PPoPP 2023},
-  year =	 2023,
-  month =	 feb # "\slash " # mar,
-  acceptance =	 {31 of 131 submissions, 23.7\%},
-  code =	 {https://github.com/gunrock/loops},
-  doi =          {10.1145/3572848.3577434},
+  series       = {PPoPP 2023},
+  year         = 2023,
+  month        = feb # "\slash " # mar,
+  acceptance   = {31 of 131 submissions, 23.7\%},
+  code         = {https://github.com/gunrock/loops},
+  doi          = {10.1145/3572848.3577434},
 }
 ```
 
