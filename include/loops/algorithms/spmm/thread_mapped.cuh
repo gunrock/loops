@@ -43,7 +43,7 @@ __global__ void __thread_mapped(setup_t config,
          custom_stride_range(std::size_t(0), B.cols, std::size_t(1))) {
       type_t sum = 0;
       for (auto nz : config.atoms(row)) {
-        sum += values[nz] * B(nz, col);
+        sum += values[nz] * B(indices[nz], col);
       }
 
       // Output
