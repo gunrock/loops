@@ -36,6 +36,22 @@ else()
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release")
 endif()
 
+####################################################
+############### SET SM ARCHITECTURE ################
+####################################################
+
+## Note: This applies to NVBench as well.
+## Can be used for applications by extracting the
+## CUDA_ARCHITECTURES property from loops project.
+## see: get_target_properties()
+## see: https://github.com/RadeonOpenCompute/rocminfo/blob/master/rocm_agent_enumerator#L12
+if(NOT CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES 70)
+  message(STATUS "Using default GPU Architecture (CMAKE_CUDA_ARCHITECTURES): ${CMAKE_CUDA_ARCHITECTURES}")
+else()
+  message(STATUS "GPU Architecture (CMAKE_CUDA_ARCHITECTURES): ${CMAKE_CUDA_ARCHITECTURES}")
+endif()
+
 project(loops
   LANGUAGES CXX C CUDA
 )
@@ -68,17 +84,6 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 ############ ADD LIBRARY: LOOPS (HEADER-ONLY) ############
 add_library(loops INTERFACE)
-
-
-####################################################
-############### SET SM ARCHITECTURE ################
-####################################################
-
-## Note: This applies to NVBench as well.
-## Can be used for applications by extracting the
-## CUDA_ARCHITECTURES property from loops project.
-## see: get_target_properties()
-set(CMAKE_CUDA_ARCHITECTURES 75)
 
 ####################################################
 ############### SET TARGET PROPERTIES ##############
