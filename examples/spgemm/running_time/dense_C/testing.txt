@@ -1,0 +1,20 @@
+bcsstk17.mtx
+Elapsed (ms):	0.012288
+
+cant.mtx
+Elapsed (ms):	0.01536
+
+consph.mtx
+Elapsed (ms):	0.015328
+
+mac_econ_fwd500.mtx
+
+pwtk.mtx
+
+rma10.mtx
+Elapsed (ms):	0.018432
+
+scircuit.mtx
+
+shipsec1.mtx
+

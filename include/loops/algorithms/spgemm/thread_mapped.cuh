@@ -1,11 +1,11 @@
 /**
  * @file thread_mapped.cuh
- * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief Sparse Matrix-Matrix Multiplication kernels.
+ * @author 
+ * @brief SpGEMM kernels.
  * @version 0.1
- * @date 2022-02-03
+ * @date 2023-10-17
  *
- * @copyright Copyright (c) 2022
+ * @copyright Copyright (c) 2023
  *
  */
 
@@ -23,7 +23,7 @@
 
 namespace loops {
 namespace algorithms {
-namespace spmm {
+namespace spgemm {
 
 template <typename setup_t,
           typename index_t,
@@ -33,22 +33,31 @@ __global__ void __thread_mapped(setup_t config,
                                 const std::size_t a_rows,
                                 const std::size_t a_cols,
                                 const std::size_t a_nnz,
-                                const offset_t* offsets,
-                                const index_t* indices,
-                                const type_t* values,
-                                const matrix_t<type_t> B,
+                                const offset_t* a_offsets,
+                                const index_t* a_indices,
+                                const type_t* a_values,
+                                const std::size_t b_rows,
+                                const std::size_t b_cols,
+                                const std::size_t b_nnz,
+                                const offset_t* b_offsets,
+                                const index_t* b_indices,
+                                const type_t* b_values,
                                 matrix_t<type_t> C) {
-  for (auto row : config.tiles()) {
-    for (auto col :
-         custom_stride_range(std::size_t(0), B.cols, std::size_t(1))) {
+  for (auto mm : config.tiles()) {
+    for (auto nn :
+         custom_stride_range(std::size_t(0), b_cols, std::size_t(1))) {
       type_t sum = 0;
-      for (auto nz : config.atoms(row)) {
-        sum += values[nz] * B(indices[nz], col);
+      for (auto nz : config.atoms(mm)) {
+        auto kk_a = a_indices[nz];
+          for (auto nz_b = b_offsets[nn]; nz_b < b_offsets[nn + 1]; ++nz_b) {
+            if (kk_a == b_indices[nz_b]) {
+              sum += a_values[nz] * b_values[nz_b];
+            }
+          }
       }
 
-      // Output
-      C(row, col) = sum;
-
+      // Output - C in sparse format (try COO)
+      // C(mm, nn) = sum;
     }
   }
 }
@@ -67,7 +76,7 @@ __global__ void __thread_mapped(setup_t config,
  */
 template <typename index_t, typename offset_t, typename type_t>
 void thread_mapped(csr_t<index_t, offset_t, type_t>& csr,
-                   matrix_t<type_t>& B,
+                   csc_t<index_t, offset_t, type_t>& csc,
                    matrix_t<type_t>& C,
                    cudaStream_t stream = 0) {
   // Create a schedule.
@@ -86,11 +95,13 @@ void thread_mapped(csr_t<index_t, offset_t, type_t>& csr,
       stream, __thread_mapped<setup_t, index_t, offset_t, type_t>, grid_size,
       block_size, config, csr.rows, csr.cols, csr.nnzs,
       csr.offsets.data().get(), csr.indices.data().get(),
-      csr.values.data().get(), B, C);
+      csr.values.data().get(), csc.rows, csc.cols, csc.nnzs,
+      csc.offsets.data().get(), csc.indices.data().get(),
+      csc.values.data().get(), C);
 
   cudaStreamSynchronize(stream);
 }
 
-}  // namespace spmm
+}  // namespace spgemm
 }  // namespace algorithms
 }  // namespace loops

@@ -1,0 +1,7 @@
+bcsstk17.mtx
+Elapsed (ms):	2458.75
+
+cant.mtx
+Elapsed (ms):	27056
+
+consph.mtx
