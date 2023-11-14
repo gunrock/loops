@@ -27,7 +27,6 @@ void writeMtxToFile(loops::matrix_t<type_t, loops::memory_space_t::host>& C_host
         std::cerr << "Failed to open file: " << filename << std::endl;
         return;
     }
-
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             outputFile << C_host(i, j);
@@ -38,4 +37,30 @@ void writeMtxToFile(loops::matrix_t<type_t, loops::memory_space_t::host>& C_host
         outputFile << "\n";
     }
     outputFile.close();
+}
+
+void copyAndSumEstimateNnzToHost(int* d_nnz_C, size_t num_cols){
+    int* h_nnz_C = new int[num_cols];
+    cudaMemcpy(h_nnz_C, d_nnz_C, num_cols * sizeof(int), cudaMemcpyDeviceToHost);
+
+    int sum = 0;
+    for (size_t i = 0; i < num_cols; ++i) {
+        sum += h_nnz_C[i];
+    }
+    
+    std::cout << "Sum of h_nnz_C: " << sum << std::endl;
+    delete[] h_nnz_C;
+}
+
+void printCNnzByRow(int* d_nnz_C, size_t num_cols){
+    int* h_nnz_C = new int[num_cols];
+    cudaMemcpy(h_nnz_C, d_nnz_C, num_cols * sizeof(int), cudaMemcpyDeviceToHost);
+
+    for (size_t i = 0; i < num_cols; ++i) {
+        std::cout << h_nnz_C[i] << ", ";
+    }
+    
+    std::cout << std::endl;
+    delete[] h_nnz_C;
+
 }
