@@ -45,7 +45,7 @@ __global__ void __estimate_nnz_test(setup_t config,
                                 int* nnz_C_per_row) {
   
   // find 2-3 matrices without explicit zeros √
-  // before after of eliminate_zeros() comparison after using scipy spgemm
+  // before after of eliminate_zeros() comparison after using scipy spgemm √
   // high-level summarize how I'm parallelizing the inner-product, and think of other parallel strategies (I might want to do and what loops allow) - config, schedule::setup, non_cooperative
   // parallel each row of A -> parallel by rows of A and cols of B 
   for (auto mm : config.tiles()) {
@@ -103,6 +103,15 @@ void estimate_nnz_test(csr_t<index_t, offset_t, type_t>& csr,
       nnz_C_per_tile);
 
   cudaStreamSynchronize(stream);
+}
+
+int sumEstimateNnzC(int* nnz_C_per_tile, size_t num_cols){
+  int sum = 0;
+  for(size_t i = 0; i < num_cols; ++i){
+    sum += nnz_C_per_tile[i];
+  }
+
+  return sum;
 }
 
 }  // namespace spgemm
