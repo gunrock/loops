@@ -105,7 +105,7 @@ class setup<algorithms_t::thread_mapped,
   using tiles_t = tiles_type;          /// Tile Type
   using atoms_t = atoms_type;          /// Atom Type
   using tiles_iterator_t = tiles_t*;   /// Tile Iterator Type
-  using atoms_iterator_t = tiles_t*;   /// Atom Iterator Type
+  using atoms_iterator_t = atoms_t*;   /// Atom Iterator Type
   using tile_size_t = tile_size_type;  /// Tile Size Type
   using atom_size_t = atom_size_type;  /// Atom Size Type
 
