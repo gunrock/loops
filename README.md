@@ -11,7 +11,7 @@ With our open-source framework, we hope to not only improve programmers' product
 ## Requirements
 
 - **OS:** Ubuntu 24.04, Windows
-- **Hardware:** NVIDIA GPU (Volta or newer)
+- **Hardware:** NVIDIA GPU (Turing or newer)
 - **Software:** CUDA 11.7 or above and cmake 3.20.1 or above.
 - **CUDA Architecture:** SM 70 or above (see [GPUs supported](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)), this is specified using cmake's command: `-DCMAKE_CUDA_ARCHITECTURES=70`. Alternatively, set the CUDA architecture version in the `CMakeLists.txt` file directly: [CMakeLists.txt#72](https://github.com/gunrock/loops/blob/main/CMakeLists.txt#L72).
 
@@ -23,7 +23,7 @@ Before building `loops` make sure you have CUDA Toolkit and cmake installed on y
 git clone https://github.com/gunrock/loops.git
 cd loops
 mkdir build && cd build
-cmake -DCMAKE_CUDA_ARCHITECTURES=70 .. # Volta = 70, Turing = 75, ...
+cmake -DCMAKE_CUDA_ARCHITECTURES=75 .. # Turing = 75, ...
 make -j$(nproc)
 bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx
 ```
