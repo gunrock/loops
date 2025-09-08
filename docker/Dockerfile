@@ -1,6 +1,4 @@
-# Or directly get from docker:
-# docker pull neoblizz/loops:v0.1
-FROM nvidia/cuda:11.7.0-devel-ubuntu20.04
+FROM nvidia/cuda:13.0.0-devel-ubuntu22.04
 
 # Install dependencies
 RUN apt-get update

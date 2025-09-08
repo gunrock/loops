@@ -9,12 +9,14 @@ Prior to the work we present and propose here, the only way to unleash the GPU's
 With our open-source framework, we hope to not only improve programmers' productivity when developing irregular-parallel algorithms on the GPU but also improve the overall performance characteristics for such applications by allowing a quick path to experimentation with a variety of existing load-balancing techniques. Consequently, we also hope that by separating the concerns of load-balancing from work processing within our abstraction, managing and extending existing code to future architectures becomes easier.
 
 ## Requirements
-- **OS:** Ubuntu 18.04, 20.04, Windows
+
+- **OS:** Ubuntu 24.04, Windows
 - **Hardware:** NVIDIA GPU (Volta or newer)
 - **Software:** CUDA 11.7 or above and cmake 3.20.1 or above.
 - **CUDA Architecture:** SM 70 or above (see [GPUs supported](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)), this is specified using cmake's command: `-DCMAKE_CUDA_ARCHITECTURES=70`. Alternatively, set the CUDA architecture version in the `CMakeLists.txt` file directly: [CMakeLists.txt#72](https://github.com/gunrock/loops/blob/main/CMakeLists.txt#L72).
 
 ## Getting Started
+
 Before building `loops` make sure you have CUDA Toolkit and cmake installed on your system, and exported in `PATH` of your system. Other external dependencies such as `NVIDIA/thrust`, `NVIDIA/cub`, etc. are automatically fetched using cmake.
 
 ```bash
@@ -31,7 +33,9 @@ bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx
 ```bash
 make loops.spmv.<algorithm>
 ```
+
 Replaced the `<algorithm>` with one of the following algorithm names to build a specific SpMV algorithm instead of all of them:
+
 - `original`
 - `thread_mapped`
 - `group_mapped`
@@ -44,6 +48,7 @@ An example of the above: `make loops.spmv.merge_path`.
 
 To download the SuiteSparse Matrix Collection[^1], simply run the following command. We recommend using a `tmux` session, because downloading the entire collection can take a significant time. Uncompress the dataset by running the following command in the dataset's directory `find . -name '*.tar.gz' -execdir tar -xzvf '{}' \;
 ` The total downloaded size of the dataset is nontrivial: uncompressed + compressed = 887GB.
+
 ```bash
 wget --recursive --no-parent --force-directories -l inf -X RB,mat \ 
 --accept "*.tar.gz" "https://suitesparse-collection-website.herokuapp.com/"
@@ -59,15 +64,20 @@ wget --recursive --no-parent --force-directories -l inf -X RB,mat \
 [^1]: Timothy A. Davis and Yifan Hu. 2011. The University of Florida Sparse Matrix Collection. ACM Transactions on Mathematical Software 38, 1, Article 1 (December 2011), 25 pages. DOI: https://doi.org/10.1145/2049662.2049663
 
 ## Experimentation
+
 If CUDA and cmake are already setup, follow the [Getting Started](#getting-started) instructions. Or, you may prefer to set up the entire project using docker, and for that we have provided a docker file and instructions on how to use it in [/docker](https://github.com/gunrock/loops/tree/main/docker) directory.
 
 ### Sanity Check
+
 Run the following command in the cmake's `build` folder:
+
 ```bash
 bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx \
  --validate -v
 ```
+
 You should approximately see the following output:
+
 ```bash
 ~/loops/build$ bin/loops.spmv.merge_path \
  -m ../datasets/chesapeake/chesapeake.mtx --validate -v
@@ -76,7 +86,9 @@ Matrix:         chesapeake.mtx
 Dimensions:     39 x 39 (340)
 Errors:         0
 ```
+
 ## Reproducing Results
+
 > Find pre-generated results in [plots/](https://github.com/gunrock/loops/blob/main/plots/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
 
 1. In the run script, update the `DATASET_DIR` to point to the path of all the downloaded datasets (set to the path of the directory containing `MM` directory, and inside the `MM` it has subdirectories with `.mtx` files): [scripts/run.sh](https://github.com/gunrock/loops/blob/main/scripts/run.sh). Additionally, you may change the path to `DATASET_FILES_NAME` containing the list of all the datasets (default points to [datasets/suitesparse.txt](https://github.com/gunrock/loops/blob/main/datasets/suitesparse.txt)).

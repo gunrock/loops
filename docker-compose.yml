@@ -1,0 +1,32 @@
+services:
+  loops-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: loops-dev:latest
+    container_name: loops-dev
+    network_mode: "host"
+    devices:
+      - /dev/dri
+    group_add:
+      - video
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    shm_size: "16g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+    volumes:
+      - ${HOME}:${HOME}
+      - ./:/workspace
+    environment:
+      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
