@@ -9,9 +9,9 @@ on:
 jobs:
   formatting-check:
     name: Format
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
       with:
         ref: ${{ github.event.pull_request.head.ref }}
 

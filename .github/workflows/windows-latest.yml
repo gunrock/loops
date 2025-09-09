@@ -1,4 +1,4 @@
-name: windows-2019
+name: windows-latest
 
 # Controls when the workflow will run
 on:
@@ -21,16 +21,16 @@ jobs:
   build:
     # https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
     if: "!contains(github.event.commits[0].message, '[skip build]')"
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Fetch CUDA toolkit using Jimver/cuda-toolkit@v0.2.7
       - name: Fetch CUDA toolkit
-        uses: Jimver/cuda-toolkit@v0.2.7
+        uses: Jimver/cuda-toolkit@v0.2.27
         id: cuda-toolkit
         with:
-          cuda: '11.7.0'
+          cuda: '13.0.0'
           linux-local-args: '["--toolkit"]'
 
       # Runs a single command using the runners shell
@@ -38,7 +38,7 @@ jobs:
         run: nvcc -V
         
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
