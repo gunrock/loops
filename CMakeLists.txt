@@ -1,232 +1,182 @@
 ####################################################
-############ INSTALLING CORRECT CMAKE ##############
+############     LOOPS CMAKE CONFIG     ############
 ####################################################
-# Installing correct cmake version is easy!
-# 1) Find the respective version here;
-# https://github.com/Kitware/CMake/releases,
-# and 2) replace the [x.xx.x] in the following
-# commands with the version number (remove the
-# brackets). For example, if you are installing
-# CMake 3.22.1, replace [x.xx.x] with 3.22.1:
 
-# wget https://github.com/Kitware/CMake/releases/download/v[x.xx.x]/cmake-[x.xx.x]-linux-x86_64.sh
-# chmod +x ./cmake-[x.xx.x]-linux-x86_64.sh
-# ./cmake-[x.xx.x]-linux-x86_64.sh
-# sudo mv cmake-[x.xx.x]-linux-x86_64 /opt/cmake
-# sudo ln -s /opt/cmake/bin/* /usr/local/bin/
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
 
-# Select "Release" as the default build type.
-# This can be altered by setting -DCMAKE_BUILD_TYPE
-# in the command-line interface to Release or Debug.
-# No reason to set CMAKE_CONFIGURATION_TYPES if it's 
-# not a multiconfig generator. Also no reason mess 
-# with CMAKE_BUILD_TYPE if it's a multiconfig generator.
-# https://stackoverflow.com/a/31548693/5729690
+# ----- Build type ---------------------------------------------------------
 get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(isMultiConfig)
-    set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE) 
+  set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "" FORCE)
 else()
-    if(NOT CMAKE_BUILD_TYPE)
-        message(STATUS "Defaulting to Release build type")
-        set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
-    endif()
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose the type of build")
-    # set the valid options for cmake-gui drop-down list
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release")
+  if(NOT CMAKE_BUILD_TYPE)
+    message(STATUS "Defaulting to Release build type")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
+  endif()
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose the type of build")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug;Release;RelWithDebInfo;MinSizeRel")
 endif()
 
-####################################################
-############### SET SM ARCHITECTURE ################
-####################################################
-
-## Note: This applies to NVBench as well.
-## Can be used for applications by extracting the
-## CUDA_ARCHITECTURES property from loops project.
-## see: get_target_properties()
-## see: https://github.com/RadeonOpenCompute/rocminfo/blob/master/rocm_agent_enumerator#L12
-if(NOT CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 70)
-  message(STATUS "Using default GPU Architecture (CMAKE_CUDA_ARCHITECTURES): ${CMAKE_CUDA_ARCHITECTURES}")
-else()
-  message(STATUS "GPU Architecture (CMAKE_CUDA_ARCHITECTURES): ${CMAKE_CUDA_ARCHITECTURES}")
+# ----- CUDA architecture selection ----------------------------------------
+# Default: detect the host GPU(s) (CMake 3.24+ supports `native`).
+# Override with -DCMAKE_CUDA_ARCHITECTURES="80;86;89;90" for multi-arch builds,
+# or pick a single arch like 90 for an H100-only build.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES "native"
+      CACHE STRING "CUDA SM architectures (default: native auto-detect)")
 endif()
 
 project(loops
+  VERSION   0.2.0
   LANGUAGES CXX C CUDA
+  DESCRIPTION "An open-source GPU load-balancing framework"
 )
 
-# begin /* Dependencies directory */
-set(PROJECT_DEPS_DIR externals)
-# end /* Dependencies directory */
+message(STATUS "Loops version: ${PROJECT_VERSION}")
+message(STATUS "Loops CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
-# begin /* Include cmake modules */
-include(${PROJECT_SOURCE_DIR}/cmake/FetchColors.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/FetchThrustCUB.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/FetchCXXOpts.cmake)
-# end /* Include cmake modules */
+# ----- Toolkit & system dependencies --------------------------------------
+# Provides imported targets: CUDA::cudart, CUDA::cuda_driver, CUDA::curand, ...
+# CUDAToolkit is required (>= 11.7) and supplies the bundled Thrust + CUB
+# headers via CUDAToolkit_INCLUDE_DIRS, so we no longer fetch them separately.
+find_package(CUDAToolkit 11.7 REQUIRED)
+message(STATUS "Found CUDA Toolkit ${CUDAToolkit_VERSION} at ${CUDAToolkit_BIN_DIR}")
 
-## Set the directory where the binaries will be stored
-set(EXECUTABLE_OUTPUT_PATH
-  ${PROJECT_BINARY_DIR}/bin
-  CACHE PATH
-  "Directory where all executables will be stored")
+# ----- Output directories -------------------------------------------------
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin"
+    CACHE PATH "Directory where all executables will be stored")
+set(LIBRARY_OUTPUT_PATH    "${PROJECT_BINARY_DIR}/lib"
+    CACHE PATH "Directory where all libraries will be stored")
 
-## Set the directory where the libraries will be stored
-set(LIBRARY_OUTPUT_PATH
-  ${PROJECT_BINARY_DIR}/lib
-  CACHE PATH
-  "Directory where all the libraries will be stored")
-
-## Export compile commands
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_VERBOSE_MAKEFILE        OFF)
 
-############ ADD LIBRARY: LOOPS (HEADER-ONLY) ############
+# ----- Project options ----------------------------------------------------
+option(LOOPS_BUILD_EXAMPLES   "Build example applications"  ON)
+option(LOOPS_BUILD_TESTS      "Build unit tests"            OFF)
+option(LOOPS_BUILD_BENCHMARKS "Build NVBench benchmarks"    OFF)
+option(LOOPS_USE_BUNDLED_CCCL "Use CUDA Toolkit's bundled Thrust/CUB instead of fetching CCCL" ON)
+
+# ----- External dependencies ----------------------------------------------
+include(${PROJECT_SOURCE_DIR}/cmake/FetchColors.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/FetchCXXOpts.cmake)
+
+if(NOT LOOPS_USE_BUNDLED_CCCL)
+  include(${PROJECT_SOURCE_DIR}/cmake/FetchCCCL.cmake)
+endif()
+
+# ----- The Loops library (header-only) ------------------------------------
 add_library(loops INTERFACE)
+add_library(loops::loops ALIAS loops)
 
-####################################################
-############### SET TARGET PROPERTIES ##############
-####################################################
-set_target_properties(loops 
-  PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF # Should this be turned on for MSVC?
-    CUDA_STANDARD 17
-    CUDA_STANDARD_REQUIRED ON
-    CUDA_EXTENSIONS OFF
-    CUDA_RESOLVE_DEVICE_SYMBOLS ON
-    CUDA_SEPARABLE_COMPILATION ON
-    CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES}
-    # CUDA_PTX_COMPILATION ON # Can only be applied to OBJ.
-)
+target_compile_features(loops INTERFACE cxx_std_17 cuda_std_17)
 
-####################################################
-############ TARGET COMPILER DEFINITIONS ###########
-####################################################
 target_compile_definitions(loops
-  INTERFACE 
-    SM_TARGET=${CMAKE_CUDA_ARCHITECTURES}
-    LOOPS_VERSION=${LOOPS_VERSION}
+  INTERFACE
+    LOOPS_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+    LOOPS_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    LOOPS_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )
 
-message(STATUS "Loops CUDA Architecture: ${CMAKE_CUDA_ARCHITECTURES}")
-
-####################################################
-############ TARGET COMPILE FEATURES ###############
-####################################################
-# Turn C++ Standard 17 ON.
-target_compile_features(loops INTERFACE cxx_std_17)
-# set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(LOOPS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-####################################################
-############ TARGET INCLUDE DIRECTORIES ############
-####################################################
 target_include_directories(loops
-  INTERFACE ${LOOPS_INCLUDE_DIR}
-  INTERFACE ${CXXOPTS_INCLUDE_DIR}
-  INTERFACE ${CUB_INCLUDE_DIR}
-  INTERFACE ${THRUST_INCLUDE_DIR}
-  INTERFACE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${CXXOPTS_INCLUDE_DIR}
 )
 
-####################################################
-############ TARGET LINK LIBRARIES #################
-####################################################
+# Bundled Thrust/CUB headers come from the toolkit include dirs (CUDA >= 11.7).
+# When LOOPS_USE_BUNDLED_CCCL=OFF, FetchCCCL.cmake exposes CCCL::Thrust / CCCL::CUB.
+if(LOOPS_USE_BUNDLED_CCCL)
+  target_include_directories(loops INTERFACE ${CUDAToolkit_INCLUDE_DIRS})
+else()
+  target_link_libraries(loops INTERFACE CCCL::Thrust CCCL::CUB CCCL::libcudacxx)
+endif()
+
 target_link_libraries(loops
-  INTERFACE curand
-  INTERFACE cuda
+  INTERFACE
+    CUDA::cudart
+    CUDA::curand
+    CUDA::cuda_driver
 )
 
-####################################################
-################# TARGET SOURCES ###################
-####################################################
 target_sources(loops
-  INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/container/detail/mmio.cpp"
+  INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/container/detail/mmio.cpp"
 )
 
-####################################################
-############## SET CXX & CUDA FLAGS ################
-####################################################
-set(CXX_FLAGS 
-  $<$<CXX_COMPILER_ID:MSVC>:
-    /W4
-  >
-  $<$<CXX_COMPILER_ID:GNU>:
-    -Wall 
-    # -Wextra
+# ----- Compile flags ------------------------------------------------------
+# Host-side warnings (CXX). NVCC forwards these via -Xcompiler.
+set(LOOPS_HOST_WARNINGS
+  $<$<CXX_COMPILER_ID:MSVC>:/W4>
+  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:
+    -Wall
     -Wno-unused-result
     -Wno-unused-local-typedefs
     -Wno-strict-aliasing
     -Wno-unused-function
     -Wno-format-security
-    # -Werror
-    # -vvv
   >
 )
 
-set(CUDA_RELEASE_FLAGS
-  --expt-extended-lambda 
+set(LOOPS_CUDA_RELEASE_FLAGS
+  --expt-extended-lambda
   --expt-relaxed-constexpr
   --use_fast_math
 )
 
-set(CUDA_DEBUG_FLAGS
-  --expt-extended-lambda 
+set(LOOPS_CUDA_DEBUG_FLAGS
+  --expt-extended-lambda
   --expt-relaxed-constexpr
-  --ptxas-options -v
-  --debug # Host debug
-  --device-debug # Device debug
+  --ptxas-options=-v
+  -G
+  -lineinfo
 )
 
-####################################################
-############ TARGET COMPILE OPTIONS ################
-####################################################
-target_compile_options(loops INTERFACE 
-  $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:DEBUG>>:${CXX_FLAGS}>
-  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:DEBUG>>:${CUDA_DEBUG_FLAGS}>
-  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:RELEASE>>:${CUDA_RELEASE_FLAGS}>
+target_compile_options(loops INTERFACE
+  $<$<COMPILE_LANGUAGE:CXX>:${LOOPS_HOST_WARNINGS}>
+  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:${LOOPS_CUDA_DEBUG_FLAGS}>
+  $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<NOT:$<CONFIG:Debug>>>:${LOOPS_CUDA_RELEASE_FLAGS}>
 )
 
-####################################################
-############ BUILD EXAMPLE APPLICATIONS ############
-####################################################
-option(LOOPS_BUILD_EXAMPLES
-  "If on, builds the example applications."
-  ON)
+# Examples / tests / benchmarks need separable compilation + propagation of
+# CUDA_ARCHITECTURES from the global default. Set them via a helper so callers
+# don't have to repeat the boilerplate.
+function(loops_setup_cuda_target target)
+  set_target_properties(${target} PROPERTIES
+    CXX_STANDARD              17
+    CXX_STANDARD_REQUIRED     ON
+    CXX_EXTENSIONS            OFF
+    CUDA_STANDARD             17
+    CUDA_STANDARD_REQUIRED    ON
+    CUDA_EXTENSIONS           OFF
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  )
+endfunction()
 
-# Subdirectories for examples, testing and documentation
+# ----- Subdirectories -----------------------------------------------------
 if(LOOPS_BUILD_EXAMPLES)
   add_subdirectory(examples)
-endif(LOOPS_BUILD_EXAMPLES)
+endif()
 
-####################################################
-################ BUILD UNIT TESTS  #################
-####################################################
-option(LOOPS_BUILD_TESTS
-  "If on, builds the unit tests."
-  OFF)
-
-# Subdirectories for examples, testing and documentation
 if(LOOPS_BUILD_TESTS)
+  enable_testing()
   include(${PROJECT_SOURCE_DIR}/cmake/FetchGoogleTest.cmake)
-  # add_subdirectory(unittests)
-endif(LOOPS_BUILD_TESTS)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/unittests/CMakeLists.txt"
+     AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/unittests")
+    file(SIZE "${CMAKE_CURRENT_SOURCE_DIR}/unittests/CMakeLists.txt" _ut_size)
+    if(_ut_size GREATER 0)
+      add_subdirectory(unittests)
+    else()
+      message(WARNING "LOOPS_BUILD_TESTS is ON but unittests/CMakeLists.txt is empty; skipping.")
+    endif()
+  endif()
+endif()
 
-####################################################
-################ BUILD BENCHMARKS  #################
-####################################################
-option(LOOPS_BUILD_BENCHMARKS
-  "If on, builds loops with benchmarking support."
-  OFF)
-
-# Subdirectories for examples, testing and documentation
 if(LOOPS_BUILD_BENCHMARKS)
-  # ... see https://github.com/NVIDIA/nvbench/issues/66
-  set(NVBench_ENABLE_NVML OFF)
+  set(NVBench_ENABLE_NVML OFF CACHE BOOL "" FORCE)
   include(${PROJECT_SOURCE_DIR}/cmake/FetchNVBench.cmake)
   add_subdirectory(benchmarks)
-endif(LOOPS_BUILD_BENCHMARKS)
+endif()

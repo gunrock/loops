@@ -1,17 +1,39 @@
-FROM nvidia/cuda:13.0.0-devel-ubuntu22.04
+# syntax=docker/dockerfile:1.7
+ARG CUDA_VERSION=12.6.3
+ARG UBUNTU_VERSION=22.04
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION}
 
-# Install dependencies
-RUN apt-get update
-RUN apt-get install -y build-essential
-RUN apt-get install -y wget vim git gcc g++
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.25.0/cmake-3.25.0-linux-x86_64.sh
-RUN chmod +x ./cmake-3.25.0-linux-x86_64.sh
-RUN mkdir /opt/cmake-3.25.0/
-RUN ./cmake-3.25.0-linux-x86_64.sh --skip-license --prefix=/opt/cmake-3.25.0
-RUN ln -s /opt/cmake-3.25.0/bin/* /usr/local/bin/
+# Base build deps. We pull cmake from Kitware's APT repo so we get a current
+# version (Ubuntu 22.04's default cmake is 3.22 which is below our minimum).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential ca-certificates curl git gnupg lsb-release \
+      ninja-build pkg-config python3 wget vim \
+ && wget -qO- https://apt.kitware.com/keys/kitware-archive-latest.asc \
+      | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" \
+      > /etc/apt/sources.list.d/kitware.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends cmake \
+ && rm -rf /var/lib/apt/lists/*
 
+# Build the project from the host's working tree (NOT a fresh git clone).
+# Mount your source on /workspace via docker-compose, or `docker run -v ...`.
+WORKDIR /workspace
 
-# Build and install
-RUN git clone https://github.com/gunrock/loops.git
-RUN cd loops && mkdir build && cd build && cmake .. && make -j$(nproc)
+# Optional one-shot build: `docker build --target builder` will compile the
+# source baked into the image. The default `runtime` stage assumes you bind-
+# mount your source and build interactively.
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS builder
+COPY --from=0 / /
+COPY . /workspace
+WORKDIR /workspace
+RUN cmake --preset release-multi \
+ && cmake --build --preset release-multi -j
+
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS runtime
+COPY --from=0 / /
+WORKDIR /workspace
+CMD ["/bin/bash"]

@@ -1,16 +1,14 @@
-# begin /* Add application */
-set(SOURCES
+set(LOOPS_SPMM_SOURCES
   thread_mapped.cu
 )
 
-foreach(SOURCE IN LISTS SOURCES)
-  get_filename_component(TEST_NAME ${SOURCE} NAME_WLE)
-  add_executable(loops.spmm.${TEST_NAME} ${SOURCE})
-  target_link_libraries(loops.spmm.${TEST_NAME} PRIVATE loops)
-  set_target_properties(loops.spmm.${TEST_NAME} 
-    PROPERTIES 
-      CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES}
-  )
-  message(STATUS "Example Added: loops.spmm.${TEST_NAME}")
+foreach(SOURCE IN LISTS LOOPS_SPMM_SOURCES)
+  get_filename_component(BASE_NAME ${SOURCE} NAME_WLE)
+  set(TARGET_NAME loops.spmm.${BASE_NAME})
+
+  add_executable(${TARGET_NAME} ${SOURCE})
+  target_link_libraries(${TARGET_NAME} PRIVATE loops::loops)
+  loops_setup_cuda_target(${TARGET_NAME})
+
+  message(STATUS "Example added: ${TARGET_NAME}")
 endforeach()
-# end /* Add application */
