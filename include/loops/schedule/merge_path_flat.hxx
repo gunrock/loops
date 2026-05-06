@@ -93,7 +93,8 @@ template <std::size_t THREADS_PER_BLOCK,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename Layout = layout::csr<tiles_type, atoms_type>>
 class preprocess_t {
  public:
   using tiles_t = tiles_type;
@@ -102,16 +103,17 @@ class preprocess_t {
   using atoms_iterator_t = atoms_t*;
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
-  using layout_t = layout::csr<tiles_t, atoms_t>;
+  using layout_t = Layout;
 
-  /// Construct from a CSR-shaped offsets pointer (back-compat).
+  /// Construct from a CSR-shaped offsets pointer (back-compat shortcut;
+  /// only valid when Layout is layout::csr).
   preprocess_t(tiles_iterator_t _tiles,
                tile_size_t _num_tiles,
                atom_size_t _num_atoms,
                cudaStream_t stream = 0)
       : preprocess_t(layout_t(_tiles, _num_tiles, _num_atoms), stream) {}
 
-  /// Construct directly from a layout view.
+  /// Construct directly from a layout view (any layout type).
   preprocess_t(layout_t _layout, cudaStream_t stream = 0)
       : total_work(_layout.num_tiles() + _layout.num_atoms()),
         num_merge_tiles(
@@ -185,14 +187,16 @@ template <std::size_t THREADS_PER_BLOCK,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename Layout>
 class setup<algorithms_t::merge_path_flat,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> {
+            atom_size_type,
+            Layout> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -200,15 +204,14 @@ class setup<algorithms_t::merge_path_flat,
   using atoms_iterator_t = atoms_t*;
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
+  using layout_t = Layout;
   using meta_t = merge_path::preprocess_t<THREADS_PER_BLOCK,
                                           ITEMS_PER_THREAD,
                                           tiles_type,
                                           atoms_type,
                                           tile_size_type,
-                                          atom_size_type>;
-
-  /// Layout view over the workload (default: CSR).
-  using layout_t = layout::csr<tiles_t, atoms_t>;
+                                          atom_size_type,
+                                          Layout>;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,

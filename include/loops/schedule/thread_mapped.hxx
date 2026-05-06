@@ -30,18 +30,21 @@ namespace schedule {
  * @tparam atoms_type      Atom-id storage type (e.g., flat nnz position).
  * @tparam tile_size_type  Counter type for tiles.
  * @tparam atom_size_type  Counter type for atoms.
+ * @tparam Layout          Layout view (default: layout::csr).
  */
 template <typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename Layout>
 class setup<algorithms_t::thread_mapped,
             1,
             1,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> {
+            atom_size_type,
+            Layout> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -50,9 +53,10 @@ class setup<algorithms_t::thread_mapped,
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
 
-  /// Layout view over the workload. Currently fixed to CSR; future work
-  /// may parameterize this so users can supply COO/ELL/custom layouts.
-  using layout_t = layout::csr<tiles_t, atoms_t>;
+  /// Layout view over the workload. Defaults to CSR but is supplied as a
+  /// template parameter; users may pass any layout that satisfies the
+  /// contract in `loops/container/layout.hxx` (CSR, ELL, custom, ...).
+  using layout_t = Layout;
 
   /// Default constructor produces an empty schedule.
   __host__ __device__ setup() : layout_() {}

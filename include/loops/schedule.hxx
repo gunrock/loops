@@ -13,6 +13,8 @@
 
 #include <cstddef>
 
+#include <loops/container/layout.hxx>
+
 namespace loops {
 namespace schedule {
 
@@ -32,10 +34,13 @@ enum algorithms_t {
  * @brief Schedule's setup interface.
  *
  * Schedules consume the workload through a layout view (see
- * `loops/container/layout.hxx`), defaulting to `layout::csr`. The 5+ method
- * layout contract is what makes these schedules format-generic: the same
- * setup specialization handles CSR, COO, ELL, or any user-defined layout
- * that satisfies the contract.
+ * `loops/container/layout.hxx`). The 5+ method layout contract is what makes
+ * the schedules format-generic: the same setup specialization handles CSR,
+ * COO, ELL, or any user-defined layout that satisfies the contract.
+ *
+ * The `Layout` template parameter defaults to `layout::csr<tiles_t, atoms_t>`
+ * for backward compatibility with the original CSR-only API; pass a
+ * different layout type to swap formats.
  *
  * @tparam scheme            The scheduling algorithm.
  * @tparam threads_per_block Number of threads per block.
@@ -44,6 +49,7 @@ enum algorithms_t {
  * @tparam atoms_t           Atom-id type (e.g., flat nnz position).
  * @tparam tile_size_t       Type of the tile size (default: std::size_t).
  * @tparam atom_size_t       Type of the atom size (default: std::size_t).
+ * @tparam Layout            Layout view (default: layout::csr).
  */
 template <algorithms_t scheme,
           std::size_t threads_per_block,
@@ -51,7 +57,8 @@ template <algorithms_t scheme,
           typename tiles_t,
           typename atoms_t,
           typename tile_size_t = std::size_t,
-          typename atom_size_t = std::size_t>
+          typename atom_size_t = std::size_t,
+          typename Layout = layout::csr<tiles_t, atoms_t>>
 class setup;
 
 }  // namespace schedule

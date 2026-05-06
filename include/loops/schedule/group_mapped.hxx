@@ -41,14 +41,16 @@ template <std::size_t THREADS_PER_BLOCK,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename Layout>
 class setup<algorithms_t::group_mapped,
             THREADS_PER_BLOCK,
             THREADS_PER_TILE,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> {
+            atom_size_type,
+            Layout> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -57,8 +59,9 @@ class setup<algorithms_t::group_mapped,
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
 
-  /// Layout view over the workload (default: CSR).
-  using layout_t = layout::csr<tiles_t, atoms_t>;
+  /// Layout view over the workload (default: CSR; supplied as a template
+  /// parameter to allow ELL/COO/custom layouts).
+  using layout_t = Layout;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
