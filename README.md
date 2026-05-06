@@ -1,6 +1,6 @@
 # 🐧 `loops`: Expressing Parallel Irregular Computations
 
-[![ubuntu-20.04](https://github.com/gunrock/loops/actions/workflows/ubuntu-20.04.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu-20.04.yml) [![ubuntu-22.04](https://github.com/gunrock/loops/actions/workflows/ubuntu-22.04.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/ubuntu-22.04.yml) [![windows-2019](https://github.com/gunrock/loops/actions/workflows/windows-2019.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows-2019.yml) [![windows-2022](https://github.com/gunrock/loops/actions/workflows/windows-2022.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/windows-2022.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7465053.svg)](https://doi.org/10.5281/zenodo.7465053)
+[![build](https://github.com/gunrock/loops/actions/workflows/build.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/build.yml) [![clang-format](https://github.com/gunrock/loops/actions/workflows/clang-format.yml/badge.svg)](https://github.com/gunrock/loops/actions/workflows/clang-format.yml) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7465053.svg)](https://doi.org/10.5281/zenodo.7465053)
 
 We propose an open-source GPU load-balancing framework for applications that exhibit irregular parallelism. The set of applications and algorithms we consider are fundamental to computing tasks ranging from sparse machine learning, large numerical simulations, and on through to graph analytics. The underlying data and data structures that drive these applications present access patterns that naturally don't map well to the GPU's architecture that is designed with dense and regular patterns in mind. 
 
@@ -10,31 +10,56 @@ With our open-source framework, we hope to not only improve programmers' product
 
 ## Requirements
 
-- **OS:** Ubuntu 24.04, Windows
-- **Hardware:** NVIDIA GPU (Turing or newer)
-- **Software:** CUDA 11.7 or above and cmake 3.20.1 or above.
-- **CUDA Architecture:** SM 70 or above (see [GPUs supported](https://en.wikipedia.org/wiki/CUDA#GPUs_supported)), this is specified using cmake's command: `-DCMAKE_CUDA_ARCHITECTURES=70`. Alternatively, set the CUDA architecture version in the `CMakeLists.txt` file directly: [CMakeLists.txt#72](https://github.com/gunrock/loops/blob/main/CMakeLists.txt#L72).
+- **OS:** Linux (Ubuntu 22.04 / 24.04 tested) or Windows.
+- **Hardware:** NVIDIA GPU with compute capability ≥ 7.0 (Volta or newer).
+- **Software:** CUDA Toolkit ≥ 11.7 and CMake ≥ 3.24.
+- **CUDA architecture:** Auto-detected by default (`CMAKE_CUDA_ARCHITECTURES=native`). Override at configure time, e.g. `-DCMAKE_CUDA_ARCHITECTURES=90` for an H100-only build, or `"70;80;90"` for a fat binary.
+
+`loops` is a header-only library. Thrust, CUB and libcu++ ship with the CUDA Toolkit and are picked up automatically — no separate fetch step is required. Only `cxxopts` (CLI parsing) is fetched as an external dependency.
 
 ## Getting Started
 
-Before building `loops` make sure you have CUDA Toolkit and cmake installed on your system, and exported in `PATH` of your system. Other external dependencies such as `NVIDIA/thrust`, `NVIDIA/cub`, etc. are automatically fetched using cmake.
+The repository ships a `CMakePresets.json` with the most common configurations. Pick whichever matches your machine:
 
 ```bash
 git clone https://github.com/gunrock/loops.git
 cd loops
-mkdir build && cd build
-cmake -DCMAKE_CUDA_ARCHITECTURES=75 .. # Turing = 75, ...
-make -j$(nproc)
-bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx
+
+# Auto-detect the GPU(s) on this host (recommended default).
+cmake --preset release-native
+cmake --build --preset release-native -j
+
+# Sanity check on the bundled chesapeake matrix.
+./build/release-native/bin/loops.spmv.merge_path \
+    -m datasets/chesapeake/chesapeake.mtx --validate
+```
+
+Available configure presets:
+
+| Preset | Architectures | Use when |
+|---|---|---|
+| `release-native` | Host's GPU(s) | Local development on a single machine |
+| `release-h100`   | sm_90         | H100 nodes |
+| `release-a100`   | sm_80         | A100 nodes |
+| `release-multi`  | sm_70…sm_90   | Distributing a fat binary |
+| `debug-native`   | Host's GPU(s) | Debug build with `-G -lineinfo` |
+| `release-with-tests` | Host's GPU(s) | Build with unit tests + benchmarks enabled |
+| `ci-multi-arch`  | sm_70;sm_80;sm_90 | CI hosts without a GPU |
+
+If your CMake is older than 3.24 you can configure manually:
+
+```bash
+cmake -B build -DCMAKE_CUDA_ARCHITECTURES=90 -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
 ```
 
 ### Building Specific Algorithms
 
 ```bash
-make loops.spmv.<algorithm>
+cmake --build --preset release-native --target loops.spmv.<algorithm>
 ```
 
-Replaced the `<algorithm>` with one of the following algorithm names to build a specific SpMV algorithm instead of all of them:
+Replace `<algorithm>` with one of:
 
 - `original`
 - `thread_mapped`
@@ -42,7 +67,7 @@ Replaced the `<algorithm>` with one of the following algorithm names to build a 
 - `work_oriented`
 - `merge_path`
 
-An example of the above: `make loops.spmv.merge_path`.
+For example: `cmake --build --preset release-native --target loops.spmv.merge_path`.
 
 ## Datasets
 
@@ -69,19 +94,17 @@ If CUDA and cmake are already setup, follow the [Getting Started](#getting-start
 
 ### Sanity Check
 
-Run the following command in the cmake's `build` folder:
+From the repository root:
 
 ```bash
-bin/loops.spmv.merge_path -m ../datasets/chesapeake/chesapeake.mtx \
- --validate -v
+./build/release-native/bin/loops.spmv.merge_path \
+    -m datasets/chesapeake/chesapeake.mtx --validate -v
 ```
 
-You should approximately see the following output:
+You should approximately see:
 
-```bash
-~/loops/build$ bin/loops.spmv.merge_path \
- -m ../datasets/chesapeake/chesapeake.mtx --validate -v
-Elapsed (ms):   0.063328
+```text
+Elapsed (ms):   0.0XX
 Matrix:         chesapeake.mtx
 Dimensions:     39 x 39 (340)
 Errors:         0
