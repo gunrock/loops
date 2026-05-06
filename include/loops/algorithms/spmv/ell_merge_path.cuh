@@ -112,8 +112,8 @@ util::timer_t ell_merge_path(ell_t<index_t, type_t>& ell,
   int overflow = math::ceil_div(num_merge_tiles, max_dim_x);
   dim3 grid_size(within_bounds, overflow, 1);
 
-  // y must be zeroed because the kernel uses atomicAdd.
-  cudaMemsetAsync(y.data().get(), 0, y.size() * sizeof(type_t), stream);
+  // y is assumed zero-initialized (vector_t<type_t>(n) default-constructs
+  // each element to 0). The kernel uses atomicAdd and relies on this.
 
   launch::non_cooperative(
       stream,
