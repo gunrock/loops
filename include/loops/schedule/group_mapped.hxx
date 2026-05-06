@@ -35,48 +35,6 @@ namespace cg_x = cg;
 namespace cg_x = cooperative_groups::experimental;
 #endif
 
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
-
 template <std::size_t THREADS_PER_BLOCK,
           std::size_t THREADS_PER_TILE,
           typename tiles_type,

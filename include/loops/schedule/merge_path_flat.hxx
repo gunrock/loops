@@ -29,66 +29,6 @@ namespace schedule {
 
 using coord_t = coordinate_t<unsigned int>;
 
-/**
- * @brief Traits for Atom.
- *
- * @todo Implement an atom iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam atoms_type Type of the atoms.
- * @tparam atom_size_type Type of the atom size.
- */
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::merge_path_flat, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-/**
- * @brief Traits for Tile.
- *
- * @todo Implement an tile iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam tiles_type Type of the tiles.
- * @tparam tile_size_type Type of the tile size (default: std::size_t).
- */
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::merge_path_flat, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
-
 namespace merge_path {
 /**
  * @brief CUB's implementation, generalized. Identifies merge path starting
