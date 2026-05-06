@@ -33,6 +33,13 @@
  *   // any k in [0, num_tiles). May be a raw pointer, a thrust
  *   // transform_iterator, or any other random-access iterator.
  *   __host__ __device__ tile_end_iterator_t tile_end_iter() const;
+ *
+ *   // Optional: inverse of tile_begin/end. Returns the tile-id that owns
+ *   // the given atom (i.e., t s.t. tile_begin(t) <= a < tile_end(t)).
+ *   // Required only for kernels that need per-atom output addressing
+ *   // (e.g., SpMV kernels driving partitioned layouts that cross row
+ *   // boundaries). Implementations should be O(1) or O(log num_tiles).
+ *   __host__ __device__ tile_id_t tile_of(atom_id_t a) const;
  * };
  * @endcode
  *
@@ -116,6 +123,28 @@ struct csr {
   __host__ __device__ tile_end_iterator_t tile_end_iter() const {
     return offsets_ + 1;
   }
+
+  /**
+   * @brief Tile-id (row) that owns atom @c a.
+   *
+   * Hand-rolled @c upper_bound on the offsets array, returning @c t such
+   * that @c offsets_[t] @c <= @c a @c < @c offsets_[t+1] . Runs in
+   * O(log num_tiles); empty rows are skipped over correctly because
+   * @c upper_bound returns the *first* index with a strictly greater
+   * value, and we subtract one to land on the owning tile.
+   */
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    tile_id_t lo = 0;
+    tile_id_t hi = n_tiles_;
+    while (lo < hi) {
+      tile_id_t mid = lo + ((hi - lo) >> 1);
+      if (offsets_[mid + 1] <= a)
+        lo = mid + 1;
+      else
+        hi = mid;
+    }
+    return lo;
+  }
 };
 
 /**
@@ -185,7 +214,14 @@ struct ell {
     return thrust::make_transform_iterator(
         thrust::counting_iterator<tile_id_t>(0), tile_end_fn{pitch_});
   }
+
+  /// Tile-id (row) that owns atom @c a. O(1) for ELL.
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    return static_cast<tile_id_t>(a / pitch_);
+  }
 };
 
 }  // namespace layout
 }  // namespace loops
+
+#include <loops/container/partitioning.hxx>

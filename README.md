@@ -82,6 +82,14 @@ In-tree layouts:
 
 To plug in your own format, write a struct satisfying the contract documented in [`include/loops/container/layout.hxx`](include/loops/container/layout.hxx) and pass it as the trailing template argument to `schedule::setup<...>`. A worked example lives in [`examples/spmv/custom_layout.cu`](examples/spmv/custom_layout.cu).
 
+### Tile partitioners
+
+A *partitioner* is a layout adaptor that re-bins atoms into a different tile grouping while still satisfying the same contract — so the schedules continue to drive it unchanged. In-tree:
+
+- `loops::layout::flat_uniform_occupancy<K, base_layout_t>` — flatten the base layout's atoms and chunk them into tiles of `K` atoms each (last tile may be smaller). Tiles can cross the base layout's natural boundaries (e.g., CSR rows), so kernels that need per-atom output addressing should atomic-add via `partitioner.base().tile_of(atom)`.
+
+A worked SpMV example using `flat_uniform_occupancy<8, csr>` lives in [`examples/spmv/flat_partitioned.cu`](examples/spmv/flat_partitioned.cu); it shares the standard `thread_mapped` schedule with no schedule-side changes.
+
 ## Datasets
 
 To download the SuiteSparse Matrix Collection[^1], simply run the following command. We recommend using a `tmux` session, because downloading the entire collection can take a significant time. Uncompress the dataset by running the following command in the dataset's directory `find . -name '*.tar.gz' -execdir tar -xzvf '{}' \;
