@@ -90,64 +90,14 @@ A *partitioner* is a layout adaptor that re-bins atoms into a different tile gro
 
 A worked SpMV example using `flat_uniform_occupancy<8, csr>` lives in [`examples/spmv/flat_partitioned.cu`](examples/spmv/flat_partitioned.cu); it shares the standard `thread_mapped` schedule with no schedule-side changes.
 
-## Datasets
+## Documentation
 
-To download the SuiteSparse Matrix Collection[^1], simply run the following command. We recommend using a `tmux` session, because downloading the entire collection can take a significant time. Uncompress the dataset by running the following command in the dataset's directory `find . -name '*.tar.gz' -execdir tar -xzvf '{}' \;
-` The total downloaded size of the dataset is nontrivial: uncompressed + compressed = 887GB.
+Long-form documentation lives in [`docs/`](docs/):
 
-```bash
-wget --recursive --no-parent --force-directories -l inf -X RB,mat \ 
---accept "*.tar.gz" "https://suitesparse-collection-website.herokuapp.com/"
-```
-
-- `--recursive` recursively download
-- `--no-parent` prevent wget from starting to fetch links in the parent of the website
-- `--l inf` keep downloading for an infinite level
-- `-X RB,mat` ignore subdirectories RB and mat, since I am only downloading matrix market MM, you can choose to download any of the others or remove this entirely to download all formats
-- `--accept` accept the following extension only
-- `--force-directories` create a hierarchy of directories, even if one would not have been created otherwise
-
-[^1]: Timothy A. Davis and Yifan Hu. 2011. The University of Florida Sparse Matrix Collection. ACM Transactions on Mathematical Software 38, 1, Article 1 (December 2011), 25 pages. DOI: https://doi.org/10.1145/2049662.2049663
-
-## Experimentation
-
-If CUDA and cmake are already setup, follow the [Getting Started](#getting-started) instructions. Or, you may prefer to set up the entire project using docker, and for that we have provided a docker file and instructions on how to use it in [/docker](https://github.com/gunrock/loops/tree/main/docker) directory.
-
-### Sanity Check
-
-From the repository root:
-
-```bash
-./build/release-native/bin/loops.spmv.merge_path \
-    -m datasets/chesapeake/chesapeake.mtx --validate -v
-```
-
-You should approximately see:
-
-```text
-Elapsed (ms):   0.0XX
-Matrix:         chesapeake.mtx
-Dimensions:     39 x 39 (340)
-Errors:         0
-```
-
-## Reproducing Results
-
-> Find pre-generated results in [plots/](https://github.com/gunrock/loops/blob/main/plots/) directory along with `performance_evaluation.ipynb` notebook to recreate the plots (labeled figures) found in the paper.
-
-1. In the run script, update the `DATASET_DIR` to point to the path of all the downloaded datasets (set to the path of the directory containing `MM` directory, and inside the `MM` it has subdirectories with `.mtx` files): [scripts/run.sh](https://github.com/gunrock/loops/blob/main/scripts/run.sh). Additionally, you may change the path to `DATASET_FILES_NAME` containing the list of all the datasets (default points to [datasets/suitesparse.txt](https://github.com/gunrock/loops/blob/main/datasets/suitesparse.txt)).
-2. Fire up the complete run using `run.sh` found in `scripts` directory, `cd scripts && ./run.sh`, note one complete run can take up to 3 days (goes over the entire suitesparse matrix collection dataset four times with four different algorithms, the main bottleneck is loading files from disk.)
-3. **Warning!** Some runs on the matrices are expected to fail as they are not in proper MatrixMarket Format although labeled as `.mtx`. These matrices and the ones that do not fit on the GPU will result in runtime exceptions or `offset_t` type overflow and can be safely ignored.
-4. To run *N* number of datasets simply adjust the stop condition here (default set to `10`): [scripts/run.sh#L22](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22), or remove this if-condition entirely to run on all available `.mtx` files: [scripts/run.sh#L22-L26](https://github.com/gunrock/loops/blob/main/scripts/run.sh#L22-L26).
-
-Expected output from the above runs are `csv` files in the same directory as the `run.sh`, these can replace the existing `csv` files within `plots/data`, and a [python jupyter notebook](https://jupyter.org/install) can be fired up to evaluate the results. Python notebook includes instructions on generating plots. See sample output of one of the `csv` files below:
-
-```csv
-kernel,dataset,rows,cols,nnzs,elapsed
-merge-path,144,144649,144649,2148786,0.0720215
-merge-path,08blocks,300,300,592,0.0170898
-merge-path,1138_bus,1138,1138,4054,0.0200195
-```
+- [Datasets](docs/datasets.md) — fetching the SuiteSparse Matrix Collection.
+- [Experimentation](docs/experimentation.md) — running the bundled examples and the sanity check.
+- [Reproducing Results](docs/reproducing-results.md) — re-running the paper's full experiment sweep and regenerating the plots.
+- [Abstraction](docs/abstraction.md), [Background](docs/background.md), and [Load-Balancing API](docs/loadbalancing_api.md) — design notes on the underlying model.
 
 ## How to Cite Loops
 Thank you for citing our work.
