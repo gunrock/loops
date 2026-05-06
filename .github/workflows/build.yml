@@ -1,0 +1,78 @@
+name: build
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+# Cancel old runs on the same ref when a new one starts.
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: linux / ubuntu-${{ matrix.os }} / cuda-${{ matrix.cuda }}
+    if: "!contains(github.event.head_commit.message, '[skip build]')"
+    runs-on: ubuntu-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['22.04', '24.04']
+        cuda: ['12.6.3', '13.0.0']
+        exclude:
+          # CUDA 13 needs newer glibc than 22.04 ships.
+          - os: '22.04'
+            cuda: '13.0.0'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install CUDA Toolkit ${{ matrix.cuda }}
+        uses: Jimver/cuda-toolkit@v0.2.27
+        id: cuda-toolkit
+        with:
+          cuda: ${{ matrix.cuda }}
+          linux-local-args: '["--toolkit"]'
+
+      - name: nvcc --version
+        run: nvcc -V
+
+      - name: 'Configure (preset: ci-multi-arch)'
+        run: cmake --preset ci-multi-arch
+
+      - name: Build
+        run: cmake --build --preset ci-multi-arch -j
+
+      - name: List built binaries
+        run: ls -la build/ci-multi-arch/bin/
+
+  windows:
+    name: windows / cuda-${{ matrix.cuda }}
+    if: "!contains(github.event.head_commit.message, '[skip build]')"
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ['12.6.3']
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install CUDA Toolkit ${{ matrix.cuda }}
+        uses: Jimver/cuda-toolkit@v0.2.27
+        with:
+          cuda: ${{ matrix.cuda }}
+
+      - name: nvcc --version
+        run: nvcc -V
+
+      - name: Configure
+        # No preset on Windows because the default Ninja generator there is
+        # `Visual Studio` which doesn't always honor the preset's generator.
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="70;80;90"
+
+      - name: Build
+        run: cmake --build build --config Release -j
