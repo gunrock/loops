@@ -74,11 +74,11 @@
     {
       "name": "ci-multi-arch",
       "displayName": "CI / multi-arch, no GPU at build host",
-      "description": "Used by GitHub Actions runners which have nvcc but no GPU.",
+      "description": "Used by GitHub Actions runners which have nvcc but no GPU. Architectures are limited to Ampere (sm_80) and Hopper (sm_90); CUDA 13 dropped Volta (sm_70) so we omit it for cross-toolkit compatibility. Pre-Ampere coverage lives in `release-multi`.",
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CUDA_ARCHITECTURES": "70;80;90"
+        "CMAKE_CUDA_ARCHITECTURES": "80;90"
       }
     }
   ],
