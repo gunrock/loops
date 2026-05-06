@@ -41,7 +41,7 @@ template <std::size_t THREADS_PER_BLOCK,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type,
-          typename Layout>
+          typename layout_type>
 class setup<algorithms_t::work_oriented,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
@@ -49,7 +49,7 @@ class setup<algorithms_t::work_oriented,
             atoms_type,
             tile_size_type,
             atom_size_type,
-            Layout> {
+            layout_type> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -60,7 +60,7 @@ class setup<algorithms_t::work_oriented,
 
   /// Layout view over the workload (default: CSR; supplied as a template
   /// parameter to allow ELL/COO/custom layouts).
-  using layout_t = Layout;
+  using layout_t = layout_type;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,

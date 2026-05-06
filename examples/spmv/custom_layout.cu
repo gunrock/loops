@@ -2,6 +2,8 @@
  * @file custom_layout.cu
  * @author Loops contributors
  * @brief How to write a user-defined layout and run any schedule on it.
+ * @version 0.1
+ * @date 2026-05-05
  *
  * This example shows that the layout contract in
  * `loops/container/layout.hxx` is genuinely user-extensible: nothing in the
@@ -11,12 +13,12 @@
  *
  * The "format" used here is intentionally toy:
  *
- *   struct row_padded { num_rows, pitch, indices, values; }
+ *     struct row_padded { num_rows, pitch, indices, values; };
  *
  * which is essentially ELL by another name. The point is *not* the format;
- * it's that the user defines `row_padded_layout` in *their* translation unit
- * and hands it to `schedule::setup<...>`. The schedule machinery has zero
- * knowledge of `row_padded` yet drives the whole computation.
+ * it's that the user defines @c row_padded_layout in *their* translation
+ * unit and hands it to @c schedule::setup<...> . The schedule machinery
+ * has zero knowledge of @c row_padded yet drives the whole computation.
  *
  * The same pattern works for any matrix format you might imagine:
  * BCSR (tile = row of blocks), DIA (tile = row, atoms = diagonals), CSR5,
@@ -44,60 +46,84 @@ using namespace loops;
 
 namespace {
 
-// ---------------------------------------------------------------------------
-// 1. The user's custom layout view.
-//
-// Satisfies the contract in loops/container/layout.hxx. POD-like, passed
-// by value into kernels. Does NOT own any storage; the index/value buffers
-// live separately in user-managed device memory.
-// ---------------------------------------------------------------------------
-template <typename TileId, typename AtomId>
+/**
+ * @brief User-defined row-padded layout view.
+ *
+ * Satisfies the layout contract in @c loops/container/layout.hxx so it can
+ * be plugged into any of the in-tree schedules. POD-like and passed by
+ * value into @c __global__ kernels; does *not* own any storage. The index
+ * and value buffers live separately in user-managed device memory.
+ *
+ * Each tile holds exactly @c pitch_ atoms; rows shorter than @c pitch_
+ * carry a sentinel column id (@c -1 ) and a zero value, which the kernel
+ * skips.
+ *
+ * @tparam tile_id_type Tile-id type (e.g., row id).
+ * @tparam atom_id_type Atom-id type (flat index into the per-row buckets).
+ */
+template <typename tile_id_type, typename atom_id_type>
 struct row_padded_layout {
  private:
+  /// Functor used to materialize tile_end values lazily for merge-path
+  /// schedules.
   struct tile_end_fn {
-    AtomId pitch;
-    __host__ __device__ AtomId operator()(TileId i) const {
-      return static_cast<AtomId>(i + 1) * pitch;
+    atom_id_type pitch;
+    __host__ __device__ atom_id_type operator()(tile_id_type i) const {
+      return static_cast<atom_id_type>(i + 1) * pitch;
     }
   };
 
  public:
-  using tile_id_t = TileId;
-  using atom_id_t = AtomId;
+  using tile_id_t = tile_id_type;
+  using atom_id_t = atom_id_type;
   using tile_end_iterator_t = thrust::transform_iterator<
       tile_end_fn,
-      thrust::counting_iterator<TileId>,
-      AtomId>;
+      thrust::counting_iterator<tile_id_t>,
+      atom_id_t>;
 
-  TileId n_rows_;
-  AtomId pitch_;
+  tile_id_t n_rows_;
+  atom_id_t pitch_;  /// atoms per tile (uniform); = max-non-zeros-per-row.
 
   __host__ __device__ row_padded_layout() : n_rows_(0), pitch_(0) {}
-  __host__ __device__ row_padded_layout(TileId n, AtomId p)
+  __host__ __device__ row_padded_layout(tile_id_t n, atom_id_t p)
       : n_rows_(n), pitch_(p) {}
 
-  __host__ __device__ TileId num_tiles() const { return n_rows_; }
-  __host__ __device__ AtomId num_atoms() const {
-    return static_cast<AtomId>(n_rows_) * pitch_;
+  __host__ __device__ tile_id_t num_tiles() const { return n_rows_; }
+  __host__ __device__ atom_id_t num_atoms() const {
+    return static_cast<atom_id_t>(n_rows_) * pitch_;
   }
-  __host__ __device__ AtomId tile_begin(TileId t) const {
-    return static_cast<AtomId>(t) * pitch_;
+  __host__ __device__ atom_id_t tile_begin(tile_id_t t) const {
+    return static_cast<atom_id_t>(t) * pitch_;
   }
-  __host__ __device__ AtomId tile_end(TileId t) const {
-    return static_cast<AtomId>(t + 1) * pitch_;
+  __host__ __device__ atom_id_t tile_end(tile_id_t t) const {
+    return static_cast<atom_id_t>(t + 1) * pitch_;
   }
-  __host__ __device__ AtomId tile_size(TileId /*t*/) const { return pitch_; }
+  __host__ __device__ atom_id_t tile_size(tile_id_t /*t*/) const {
+    return pitch_;
+  }
 
+  /// Random-access iterator @c i where @c i[k] @c == @c tile_end(k).
   __host__ __device__ tile_end_iterator_t tile_end_iter() const {
     return thrust::make_transform_iterator(
-        thrust::counting_iterator<TileId>(0), tile_end_fn{pitch_});
+        thrust::counting_iterator<tile_id_t>(0), tile_end_fn{pitch_});
   }
 };
 
-// ---------------------------------------------------------------------------
-// 2. A trivial host-side bucket-fill: pull a CSR matrix into a row-padded
-//    flat layout (sentinel = -1 for missing entries).
-// ---------------------------------------------------------------------------
+/**
+ * @brief Toy host-side storage bucket-filled from a CSR matrix.
+ *
+ * Computes @c pitch as the matrix-wide max non-zeros-per-row, then
+ * row-major fills two dense arrays of length @c rows*pitch . Missing
+ * entries use the sentinel column id @c kPad and a zero value.
+ *
+ * The data layout (row-major dense, sentinel-padded) matches what
+ * @c row_padded_layout assumes; the layout view above is a non-owning
+ * window into this storage.
+ *
+ * @tparam index_t  Type of the column indices.
+ * @tparam offset_t Type of the source CSR offsets.
+ * @tparam value_t  Type of the non-zero values.
+ */
 template <typename index_t, typename offset_t, typename value_t>
 struct row_padded_storage {
   std::size_t num_rows;
@@ -136,11 +162,19 @@ struct row_padded_storage {
   }
 };
 
-// ---------------------------------------------------------------------------
-// 3. The kernel: pure schedule-based iteration. Note that nothing here
-//    knows about row_padded_layout in particular. Any layout satisfying
-//    the contract works.
-// ---------------------------------------------------------------------------
+/**
+ * @brief SpMV kernel driven by a layout-generic schedule.
+ *
+ * Nothing here knows about @c row_padded_layout in particular; the kernel
+ * walks @c config.tiles() and @c config.atoms(row) , both of which are
+ * provided by the schedule on top of whatever layout the caller passed.
+ * The same kernel body would compile against CSR, ELL, or any other
+ * layout satisfying the contract.
+ *
+ * @tparam setup_t Schedule setup (e.g., @c schedule::setup<thread_mapped,...> ).
+ * @tparam index_t Column-index type.
+ * @tparam type_t  Value type.
+ */
 template <typename setup_t, typename index_t, typename type_t>
 __global__ void __custom_layout_spmv(setup_t config,
                                      const index_t* indices,
@@ -175,9 +209,7 @@ int main(int argc, char** argv) {
   vector_t<type_t> y(csr.rows);
   generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
 
-  // ---------------------------------------------------------------------
-  // Wire the user-defined layout into the existing thread-mapped schedule.
-  // ---------------------------------------------------------------------
+  /// Wire the user-defined layout into the existing thread-mapped schedule.
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using my_layout_t = row_padded_layout<tile_id_t, atom_id_t>;

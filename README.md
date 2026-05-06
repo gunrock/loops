@@ -77,8 +77,8 @@ The four scheduling algorithms (`thread_mapped`, `group_mapped`, `work_oriented`
 
 In-tree layouts:
 
-- `loops::layout::csr<TileId, AtomId>` — backed by a row-offset prefix-sum array (the default).
-- `loops::layout::ell<TileId, AtomId>` — uniform pitch per row, no offsets array; `tile_end_iter()` is a `thrust::transform_iterator` synthesized on the fly.
+- `loops::layout::csr<tile_id_t, atom_id_t>` — backed by a row-offset prefix-sum array (the default).
+- `loops::layout::ell<tile_id_t, atom_id_t>` — uniform pitch per row, no offsets array; `tile_end_iter()` is a `thrust::transform_iterator` synthesized on the fly.
 
 To plug in your own format, write a struct satisfying the contract documented in [`include/loops/container/layout.hxx`](include/loops/container/layout.hxx) and pass it as the trailing template argument to `schedule::setup<...>`. A worked example lives in [`examples/spmv/custom_layout.cu`](examples/spmv/custom_layout.cu).
 

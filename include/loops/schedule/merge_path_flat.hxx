@@ -94,7 +94,7 @@ template <std::size_t THREADS_PER_BLOCK,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type,
-          typename Layout = layout::csr<tiles_type, atoms_type>>
+          typename layout_type = layout::csr<tiles_type, atoms_type>>
 class preprocess_t {
  public:
   using tiles_t = tiles_type;
@@ -103,10 +103,10 @@ class preprocess_t {
   using atoms_iterator_t = atoms_t*;
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
-  using layout_t = Layout;
+  using layout_t = layout_type;
 
   /// Construct from a CSR-shaped offsets pointer (back-compat shortcut;
-  /// only valid when Layout is layout::csr).
+  /// only valid when @c layout_type is @c layout::csr ).
   preprocess_t(tiles_iterator_t _tiles,
                tile_size_t _num_tiles,
                atom_size_t _num_atoms,
@@ -188,7 +188,7 @@ template <std::size_t THREADS_PER_BLOCK,
           typename atoms_type,
           typename tile_size_type,
           typename atom_size_type,
-          typename Layout>
+          typename layout_type>
 class setup<algorithms_t::merge_path_flat,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
@@ -196,7 +196,7 @@ class setup<algorithms_t::merge_path_flat,
             atoms_type,
             tile_size_type,
             atom_size_type,
-            Layout> {
+            layout_type> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -204,14 +204,14 @@ class setup<algorithms_t::merge_path_flat,
   using atoms_iterator_t = atoms_t*;
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
-  using layout_t = Layout;
+  using layout_t = layout_type;
   using meta_t = merge_path::preprocess_t<THREADS_PER_BLOCK,
                                           ITEMS_PER_THREAD,
                                           tiles_type,
                                           atoms_type,
                                           tile_size_type,
                                           atom_size_type,
-                                          Layout>;
+                                          layout_type>;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
