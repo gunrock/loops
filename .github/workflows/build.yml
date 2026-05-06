@@ -17,6 +17,7 @@ jobs:
     name: linux / ubuntu-${{ matrix.os }} / cuda-${{ matrix.cuda }}
     if: "!contains(github.event.head_commit.message, '[skip build]')"
     runs-on: ubuntu-${{ matrix.os }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +63,7 @@ jobs:
     # historically had install-path issues on the in-flight image. Revisit
     # when the new image stabilizes.
     runs-on: windows-2022
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -74,9 +76,13 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
           cuda: ${{ matrix.cuda }}
-          # Default `local` method is the most reliable on Windows; sub-package
-          # naming is undocumented and brittle there.
-          method: local
+          # `network` method downloads only the sub-packages we need
+          # (~500 MB) instead of the full 3 GB local installer, which
+          # silently hangs on windows-2022 for 25+ minutes.
+          method: network
+          # Windows sub-package names use underscores (vs. hyphens on
+          # Linux) per the Jimver action's windows-links.ts.
+          sub-packages: '["nvcc", "cudart", "curand", "curand_dev", "thrust", "visual_studio_integration"]'
           log-file-suffix: 'windows-cuda-${{ matrix.cuda }}.txt'
 
       - name: nvcc --version
@@ -84,8 +90,9 @@ jobs:
 
       - name: Configure
         # No preset on Windows: the default generator there is Visual Studio
-        # which doesn't always honor the preset's generator field.
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="70;80;90"
+        # which doesn't always honor the preset's generator field. Match the
+        # CI preset's architectures (sm_80;sm_90).
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="80;90"
 
       - name: Build
         run: cmake --build build --config Release -j
