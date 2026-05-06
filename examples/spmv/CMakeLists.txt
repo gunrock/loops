@@ -6,6 +6,7 @@ set(LOOPS_SPMV_SOURCES
   merge_path.cu
   ell_thread_mapped.cu
   ell_merge_path.cu
+  custom_layout.cu
 )
 
 foreach(SOURCE IN LISTS LOOPS_SPMV_SOURCES)

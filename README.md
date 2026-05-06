@@ -66,8 +66,21 @@ Replace `<algorithm>` with one of:
 - `group_mapped`
 - `work_oriented`
 - `merge_path`
+- `ell_thread_mapped`, `ell_merge_path` (ELL-backed examples; same schedules driving a non-CSR layout)
+- `custom_layout` (worked example showing a user-defined layout)
 
 For example: `cmake --build --preset release-native --target loops.spmv.merge_path`.
+
+## Format-Generic Schedules
+
+The four scheduling algorithms (`thread_mapped`, `group_mapped`, `work_oriented`, `merge_path_flat`) talk to the workload through a small **layout view** contract rather than directly poking at CSR offset arrays. Any struct that exposes the contract — `num_tiles()`, `num_atoms()`, `tile_begin(t)`, `tile_end(t)`, `tile_size(t)`, `tile_end_iter()` — can drive any of the schedules without modification.
+
+In-tree layouts:
+
+- `loops::layout::csr<TileId, AtomId>` — backed by a row-offset prefix-sum array (the default).
+- `loops::layout::ell<TileId, AtomId>` — uniform pitch per row, no offsets array; `tile_end_iter()` is a `thrust::transform_iterator` synthesized on the fly.
+
+To plug in your own format, write a struct satisfying the contract documented in [`include/loops/container/layout.hxx`](include/loops/container/layout.hxx) and pass it as the trailing template argument to `schedule::setup<...>`. A worked example lives in [`examples/spmv/custom_layout.cu`](examples/spmv/custom_layout.cu).
 
 ## Datasets
 

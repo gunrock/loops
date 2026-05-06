@@ -3,27 +3,49 @@
  * @author Muhammad Osama (mosama@ucdavis.edu)
  * @brief Layout views consumed by the schedule machinery.
  *
- * A "tile-atom layout" describes how the irregular workload is partitioned
- * into tiles, where each tile owns some number of atoms. Schedules
+ * A "tile-atom layout" describes how an irregular workload is partitioned
+ * into tiles, where each tile owns some number of atoms. The schedules
  * (thread_mapped, group_mapped, work_oriented, merge_path_flat) talk to
  * layouts only through this contract; they never touch format-specific
- * storage. Adding support for a new format (COO, ELL, BCSR, ...) means
- * writing a new layout view that exposes the same methods.
+ * storage. Adding support for a new format (COO, ELL, BCSR, DIA, ...) is
+ * therefore a matter of writing a new layout view that satisfies the
+ * contract below.
  *
- * The minimal contract a layout view must provide is:
+ * --------------------------- The Layout Contract ---------------------------
  *
- *   using tile_id_t = ...;             // index type for tiles
- *   using atom_id_t = ...;             // index type for atoms
- *   tile_id_t num_tiles() const;       // total number of tiles
- *   atom_id_t num_atoms() const;       // total number of atoms
- *   atom_id_t tile_begin(tile_id_t t); // first atom id in tile t
- *   atom_id_t tile_end  (tile_id_t t); // one-past-last atom id in tile t
- *   atom_id_t tile_size (tile_id_t t); // tile_end(t) - tile_begin(t)
- *   <random-access iterator>
- *     tile_end_iter()      const;      // i[k] == tile_end(k), for merge-path
+ *   struct my_layout {
+ *     using tile_id_t = ...;                    // tile index type
+ *     using atom_id_t = ...;                    // atom index type
+ *     using tile_end_iterator_t = ...;          // random-access iterator
+ *                                               // returning atom_id_t
  *
- * Methods may be __host__ __device__ as appropriate. Layout views are passed
- * by value into kernels, so they should be POD-like and small.
+ *     __host__ __device__ tile_id_t num_tiles() const;
+ *     __host__ __device__ atom_id_t num_atoms() const;
+ *
+ *     __host__ __device__ atom_id_t tile_begin(tile_id_t t) const;
+ *     __host__ __device__ atom_id_t tile_end  (tile_id_t t) const;
+ *     __host__ __device__ atom_id_t tile_size (tile_id_t t) const;
+ *
+ *     // For merge-path schedules. Must satisfy: it[k] == tile_end(k) for
+ *     // any k in [0, num_tiles). May be a raw pointer, a thrust
+ *     // transform_iterator, or any other random-access iterator.
+ *     __host__ __device__ tile_end_iterator_t tile_end_iter() const;
+ *   };
+ *
+ * Properties the schedules assume:
+ *
+ *   * tile_begin(0) == 0
+ *   * tile_end(num_tiles() - 1) == num_atoms()
+ *   * tile_end is monotonically non-decreasing in t (merge-path search relies
+ *     on this; it binary-searches over tile_end_iter()).
+ *
+ * Layout views are passed *by value* into __global__ kernels, so they
+ * should be POD-like and small (a few words is typical: pointers, sizes,
+ * maybe a stride). Avoid owning resources; treat the layout as a
+ * non-owning view over user-managed storage.
+ *
+ * For an end-to-end example of writing a custom layout, see
+ * `examples/spmv/custom_layout.cu`.
  *
  * @copyright Copyright (c) 2026
  *
