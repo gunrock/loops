@@ -1,0 +1,135 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "release-native",
+      "displayName": "Release / native arch (auto-detect host GPU)",
+      "description": "Default preset: builds Release for the GPU(s) present on the build host.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "native"
+      }
+    },
+    {
+      "name": "debug-native",
+      "displayName": "Debug / native arch",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CUDA_ARCHITECTURES": "native"
+      }
+    },
+    {
+      "name": "release-h100",
+      "displayName": "Release / sm_90 only (H100)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "90"
+      }
+    },
+    {
+      "name": "release-a100",
+      "displayName": "Release / sm_80 only (A100)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "80"
+      }
+    },
+    {
+      "name": "release-multi",
+      "displayName": "Release / multi-arch fat binary (Volta..Hopper)",
+      "description": "Builds for sm_70, sm_75, sm_80, sm_86, sm_89, sm_90. Slower compile.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "70;75;80;86;89;90"
+      }
+    },
+    {
+      "name": "release-with-tests",
+      "displayName": "Release / native + tests + benchmarks",
+      "inherits": "release-native",
+      "cacheVariables": {
+        "LOOPS_BUILD_TESTS": "ON",
+        "LOOPS_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "ci-multi-arch",
+      "displayName": "CI / multi-arch, no GPU at build host",
+      "description": "Used by GitHub Actions runners which have nvcc but no GPU. Architectures are limited to Ampere (sm_80) and Hopper (sm_90); CUDA 13 dropped Volta (sm_70) so we omit it for cross-toolkit compatibility. Pre-Ampere coverage lives in `release-multi`.",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CUDA_ARCHITECTURES": "80;90"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-native",
+      "configurePreset": "release-native",
+      "jobs": 0
+    },
+    {
+      "name": "debug-native",
+      "configurePreset": "debug-native",
+      "jobs": 0
+    },
+    {
+      "name": "release-h100",
+      "configurePreset": "release-h100",
+      "jobs": 0
+    },
+    {
+      "name": "release-a100",
+      "configurePreset": "release-a100",
+      "jobs": 0
+    },
+    {
+      "name": "release-multi",
+      "configurePreset": "release-multi",
+      "jobs": 0
+    },
+    {
+      "name": "release-with-tests",
+      "configurePreset": "release-with-tests",
+      "jobs": 0
+    },
+    {
+      "name": "ci-multi-arch",
+      "configurePreset": "ci-multi-arch",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "release-with-tests",
+      "configurePreset": "release-with-tests",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
+    }
+  ]
+}
