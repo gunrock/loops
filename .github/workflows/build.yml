@@ -35,10 +35,10 @@ jobs:
         id: cuda-toolkit
         with:
           cuda: ${{ matrix.cuda }}
-          method: network
-          # Only what the loops library actually links against. Skips drivers,
-          # samples, profilers, debug bins -> ~5x faster install.
-          sub-packages: '["nvcc", "cudart", "cudart-dev", "curand", "curand-dev", "thrust"]'
+          # Default `local` method with `--toolkit` skips drivers and samples
+          # (~30% smaller install). `network` + sub-packages is faster but the
+          # sub-package naming is brittle and version-sensitive on Linux.
+          linux-local-args: '["--toolkit"]'
           # Required for matrix builds so each job's log file is unique.
           log-file-suffix: 'ubuntu-${{ matrix.os }}-cuda-${{ matrix.cuda }}.txt'
 
