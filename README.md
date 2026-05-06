@@ -17,9 +17,7 @@ With our open-source framework, we hope to not only improve programmers' product
 
 `loops` is a header-only library. Thrust, CUB and libcu++ ship with the CUDA Toolkit and are picked up automatically — no separate fetch step is required. Only `cxxopts` (CLI parsing) is fetched as an external dependency.
 
-## Getting Started
-
-The repository ships a `CMakePresets.json` with the most common configurations. Pick whichever matches your machine:
+## Quick Start
 
 ```bash
 git clone https://github.com/gunrock/loops.git
@@ -34,42 +32,7 @@ cmake --build --preset release-native -j
     -m datasets/chesapeake/chesapeake.mtx --validate
 ```
 
-Available configure presets:
-
-| Preset | Architectures | Use when |
-|---|---|---|
-| `release-native` | Host's GPU(s) | Local development on a single machine |
-| `release-h100`   | sm_90         | H100 nodes |
-| `release-a100`   | sm_80         | A100 nodes |
-| `release-multi`  | sm_70…sm_90   | Distributing a fat binary |
-| `debug-native`   | Host's GPU(s) | Debug build with `-G -lineinfo` |
-| `release-with-tests` | Host's GPU(s) | Build with unit tests + benchmarks enabled |
-| `ci-multi-arch`  | sm_70;sm_80;sm_90 | CI hosts without a GPU |
-
-If your CMake is older than 3.24 you can configure manually:
-
-```bash
-cmake -B build -DCMAKE_CUDA_ARCHITECTURES=90 -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-```
-
-### Building Specific Algorithms
-
-```bash
-cmake --build --preset release-native --target loops.spmv.<algorithm>
-```
-
-Replace `<algorithm>` with one of:
-
-- `original`
-- `thread_mapped`
-- `group_mapped`
-- `work_oriented`
-- `merge_path`
-- `ell_thread_mapped`, `ell_merge_path` (ELL-backed examples; same schedules driving a non-CSR layout)
-- `custom_layout` (worked example showing a user-defined layout)
-
-For example: `cmake --build --preset release-native --target loops.spmv.merge_path`.
+Other configure presets (`release-h100`, `release-a100`, `release-multi`, `debug-native`, `release-with-tests`, `ci-multi-arch`), CMake-presets-free fallback, individual example targets, and Docker setup are all covered in [docs/build.md](docs/build.md).
 
 ## Format-Generic Schedules
 
@@ -94,6 +57,7 @@ A worked SpMV example using `flat_uniform_occupancy<8, csr>` lives in [`examples
 
 Long-form documentation lives in [`docs/`](docs/):
 
+- [Building](docs/build.md) — full CMake-presets table, CUDA-architecture overrides, optional dependencies, and Docker.
 - [Datasets](docs/datasets.md) — fetching the SuiteSparse Matrix Collection.
 - [Experimentation](docs/experimentation.md) — running the bundled examples and the sanity check.
 - [Reproducing Results](docs/reproducing-results.md) — re-running the paper's full experiment sweep and regenerating the plots.
