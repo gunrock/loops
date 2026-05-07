@@ -46,7 +46,10 @@ template <std::size_t R,
           memory_space_t space>
 struct bcsr_t;
 
-template <typename index_t, typename offset_t, typename value_t, memory_space_t space>
+template <typename index_t,
+          typename offset_t,
+          typename value_t,
+          memory_space_t space>
 struct dia_t;
 
 }  // namespace loops

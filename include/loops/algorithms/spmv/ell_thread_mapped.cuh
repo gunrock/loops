@@ -57,10 +57,9 @@ void ell_thread_mapped(ell_t<index_t, type_t>& ell,
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using ell_layout_t = layout::ell<tile_id_t, atom_id_t>;
-  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1,
-                                  tile_id_t, atom_id_t,
-                                  std::size_t, std::size_t,
-                                  ell_layout_t>;
+  using setup_t =
+      schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1, tile_id_t,
+                      atom_id_t, std::size_t, std::size_t, ell_layout_t>;
 
   ell_layout_t lay(static_cast<tile_id_t>(ell.rows),
                    static_cast<atom_id_t>(ell.pitch));
@@ -68,10 +67,10 @@ void ell_thread_mapped(ell_t<index_t, type_t>& ell,
 
   constexpr std::size_t block_size = 128;
   std::size_t grid_size = (ell.rows + block_size - 1) / block_size;
-  launch::non_cooperative(
-      stream, __ell_thread_mapped<setup_t, index_t, type_t>, grid_size,
-      block_size, config, ell.indices.data().get(), ell.values.data().get(),
-      x.data().get(), y.data().get());
+  launch::non_cooperative(stream, __ell_thread_mapped<setup_t, index_t, type_t>,
+                          grid_size, block_size, config,
+                          ell.indices.data().get(), ell.values.data().get(),
+                          x.data().get(), y.data().get());
 
   cudaStreamSynchronize(stream);
 }

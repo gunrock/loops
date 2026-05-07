@@ -86,11 +86,11 @@ util::timer_t dia_thread_mapped(dia_t<index_t, offset_t, type_t>& dia,
 
   util::timer_t timer;
   timer.start();
-  launch::non_cooperative(
-      stream, __dia_thread_mapped<setup_t, index_t, type_t>, grid_size,
-      block_size, config, dia.cols, dia.stride, dia.num_diagonals,
-      dia.diag_offsets.data().get(), dia.values.data().get(), x.data().get(),
-      y.data().get());
+  launch::non_cooperative(stream, __dia_thread_mapped<setup_t, index_t, type_t>,
+                          grid_size, block_size, config, dia.cols, dia.stride,
+                          dia.num_diagonals, dia.diag_offsets.data().get(),
+                          dia.values.data().get(), x.data().get(),
+                          y.data().get());
   cudaStreamSynchronize(stream);
   timer.stop();
   return timer;

@@ -58,8 +58,7 @@ __global__ void __launch_bounds__(int(threads_per_block))
     auto nz = config.atom_idx(item, map);
     auto row = config.tile_idx(map);
     const index_t col = indices[nz];
-    type_t nonzero =
-        (col >= 0) ? (values[nz] * x[col]) : type_t(0);
+    type_t nonzero = (col >= 0) ? (values[nz] * x[col]) : type_t(0);
     if (config.atoms_counting_it[map.y] <
         temporary_storage.tile_end_offset[map.x]) {
       atomicAdd(&(y[row]), nonzero);
@@ -99,9 +98,8 @@ util::timer_t ell_merge_path(ell_t<index_t, type_t>& ell,
   preprocessor_t meta(lay, stream);
 
   int max_dim_x;
-  int num_merge_tiles =
-      math::ceil_div(ell.rows + ell.rows * ell.pitch,
-                     block_size * items_per_thread);
+  int num_merge_tiles = math::ceil_div(ell.rows + ell.rows * ell.pitch,
+                                       block_size * items_per_thread);
   int device_ordinal = device::get();
   cudaDeviceGetAttribute(&max_dim_x, cudaDevAttrMaxGridDimX, device_ordinal);
 

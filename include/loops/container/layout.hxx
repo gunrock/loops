@@ -90,7 +90,8 @@ struct csr {
   using atom_id_t = atom_id_type;
   using tile_end_iterator_t = atom_id_t const*;
 
-  atom_id_t const* offsets_;  /// length num_tiles + 1, monotonically non-decreasing.
+  atom_id_t const*
+      offsets_;  /// length num_tiles + 1, monotonically non-decreasing.
   tile_id_t n_tiles_;
   atom_id_t n_atoms_;
 
@@ -148,7 +149,8 @@ struct csr {
 };
 
 /**
- * @brief DIA-shaped tile-atom layout view (tile is a row, atom is a diagonal cell).
+ * @brief DIA-shaped tile-atom layout view (tile is a row, atom is a diagonal
+ * cell).
  *
  * Diagonal (DIA) format stores @c num_diagonals dense diagonals; from a
  * scheduling perspective this is identical to an ELL with @c pitch ==
@@ -166,7 +168,7 @@ struct dia {
   using tile_id_t = tile_id_type;
   using atom_id_t = atom_id_type;
 
-private:
+ private:
   struct tile_end_fn {
     atom_id_t pitch;  // == num_diagonals
     __host__ __device__ atom_id_t operator()(tile_id_t i) const {
@@ -174,7 +176,7 @@ private:
     }
   };
 
-public:
+ public:
   using tile_end_iterator_t =
       thrust::transform_iterator<tile_end_fn,
                                  thrust::counting_iterator<tile_id_t>,
@@ -313,7 +315,8 @@ struct csc {
   using atom_id_t = atom_id_type;
   using tile_end_iterator_t = atom_id_t const*;
 
-  atom_id_t const* offsets_;  /// length num_tiles + 1, monotonically non-decreasing.
+  atom_id_t const*
+      offsets_;  /// length num_tiles + 1, monotonically non-decreasing.
   tile_id_t n_tiles_;
   atom_id_t n_atoms_;
 
@@ -451,13 +454,14 @@ struct ell {
  public:
   using tile_id_t = tile_id_type;
   using atom_id_t = atom_id_type;
-  using tile_end_iterator_t = thrust::transform_iterator<
-      tile_end_fn,
-      thrust::counting_iterator<tile_id_t>,
-      atom_id_t>;
+  using tile_end_iterator_t =
+      thrust::transform_iterator<tile_end_fn,
+                                 thrust::counting_iterator<tile_id_t>,
+                                 atom_id_t>;
 
   tile_id_t n_tiles_;
-  atom_id_t pitch_;  /// atoms per tile (uniform); = max-non-zeros-per-row in SpMV.
+  atom_id_t
+      pitch_;  /// atoms per tile (uniform); = max-non-zeros-per-row in SpMV.
 
   __host__ __device__ ell() : n_tiles_(0), pitch_(0) {}
 

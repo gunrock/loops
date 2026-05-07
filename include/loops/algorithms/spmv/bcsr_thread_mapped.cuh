@@ -47,7 +47,8 @@ __global__ void __bcsr_thread_mapped(setup_t config,
   for (auto br : config.tiles()) {
     type_t acc[R];
 #pragma unroll
-    for (std::size_t i = 0; i < R; ++i) acc[i] = type_t{0};
+    for (std::size_t i = 0; i < R; ++i)
+      acc[i] = type_t{0};
 
     for (auto b : config.atoms(br)) {
       const std::size_t bc = static_cast<std::size_t>(block_col_indices[b]);
@@ -113,8 +114,7 @@ util::timer_t bcsr_thread_mapped(bcsr_t<R, C, index_t, offset_t, type_t>& bcsr,
   util::timer_t timer;
   timer.start();
   launch::non_cooperative(
-      stream,
-      __bcsr_thread_mapped<R, C, setup_t, index_t, type_t>, grid_size,
+      stream, __bcsr_thread_mapped<R, C, setup_t, index_t, type_t>, grid_size,
       block_size, config, bcsr.rows, bcsr.block_col_indices.data().get(),
       bcsr.values.data().get(), x.data().get(), y.data().get());
   cudaStreamSynchronize(stream);

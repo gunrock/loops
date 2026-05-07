@@ -39,8 +39,9 @@ int main(int argc, char** argv) {
   auto timer = algorithms::spmv::dia_thread_mapped(dia, x, y);
 
   std::cout << "dia_thread_mapped," << mtx.dataset << "," << csr.rows << ","
-            << csr.cols << "," << csr.nnzs << ",num_diagonals="
-            << dia.num_diagonals << "," << timer.milliseconds() << std::endl;
+            << csr.cols << "," << csr.nnzs
+            << ",num_diagonals=" << dia.num_diagonals << ","
+            << timer.milliseconds() << std::endl;
 
   if (parameters.validate)
     cpu::validate(parameters, csr, x, y);
