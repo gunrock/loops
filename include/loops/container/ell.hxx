@@ -76,6 +76,28 @@ struct ell_t {
         values(rhs.values) {}
 
   /**
+   * @brief Probe the ELL pitch (max-nnz-per-row) of a CSR matrix without
+   * materializing the dense storage.
+   *
+   * Useful for preflight memory checks on power-law / hub-heavy matrices
+   * (e.g. social-network graphs), where ELL pitch can blow up to
+   * @c O(N) and the dense @c rows*pitch buffer would exceed available
+   * memory. Callers can compare @c pitch * rows * sizeof(value_t)
+   * against a budget before constructing an @c ell_t.
+   */
+  template <typename offset_t, auto rhs_space>
+  static std::size_t max_nnz_per_row(
+      const csr_t<index_t, offset_t, value_t, rhs_space>& csr) {
+    csr_t<index_t, offset_t, value_t, memory_space_t::host> h(csr);
+    std::size_t mpr = 0;
+    for (std::size_t r = 0; r < h.rows; ++r) {
+      auto deg = static_cast<std::size_t>(h.offsets[r + 1] - h.offsets[r]);
+      if (deg > mpr) mpr = deg;
+    }
+    return mpr;
+  }
+
+  /**
    * @brief Build an ELL view of a CSR matrix.
    *
    * Computes `pitch = max_r (offsets[r+1] - offsets[r])` and bucket-fills
