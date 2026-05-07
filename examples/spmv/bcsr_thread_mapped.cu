@@ -28,7 +28,7 @@ using namespace loops;
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
-  using type_t = float;
+  using type_t = LOOPS_VALUE_T;
 
   constexpr std::size_t kR = 2;
   constexpr std::size_t kC = 2;

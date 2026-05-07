@@ -19,12 +19,33 @@ using namespace loops;
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
-  using type_t = float;
+  using type_t = LOOPS_VALUE_T;
 
   parameters_t parameters(argc, argv);
 
   matrix_market_t<index_t, offset_t, type_t> mtx;
   csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
+
+  // ELL degenerates to dense storage on power-law / hub-heavy matrices
+  // (one entry of pitch per max-degree vertex). Probe the pitch up-front
+  // so we bail out with a structured message instead of OOM-killing the
+  // process; matrices that need more should pick a different layout.
+  using ell_type = ell_t<index_t, type_t>;
+  const std::size_t pitch = ell_type::max_nnz_per_row(csr);
+  const std::size_t bytes = pitch * csr.rows * sizeof(type_t);
+  constexpr std::size_t kMaxEllBytes = std::size_t{4} << 30;  // 4 GiB
+  if (bytes > kMaxEllBytes) {
+    std::cout << "ell_thread_mapped," << mtx.dataset << "," << csr.rows << ","
+              << csr.cols << "," << csr.nnzs << ",pitch=" << pitch
+              << ",SKIP_TOO_LARGE_FOR_ELL" << std::endl;
+    std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
+              << std::endl;
+    std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
+              << csr.nnzs << ")" << std::endl;
+    std::cout << "Errors:\t\tSKIP" << std::endl;
+    return 0;
+  }
+
   ell_t<index_t, type_t> ell(csr);
 
   vector_t<type_t> x(csr.cols);
