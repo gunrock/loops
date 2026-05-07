@@ -13,6 +13,7 @@
 #pragma once
 
 #include <loops/stride_ranges.hxx>
+#include <loops/container/layout.hxx>
 
 #include <thrust/binary_search.h>
 #include <thrust/execution_policy.h>
@@ -35,66 +36,21 @@ namespace cg_x = cg;
 namespace cg_x = cooperative_groups::experimental;
 #endif
 
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
-
 template <std::size_t THREADS_PER_BLOCK,
           std::size_t THREADS_PER_TILE,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename layout_type>
 class setup<algorithms_t::group_mapped,
             THREADS_PER_BLOCK,
             THREADS_PER_TILE,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algorithms_t::group_mapped,
-                                                 tiles_type,
-                                                 tile_size_type>,
-                              public atom_traits<algorithms_t::group_mapped,
-                                                 atoms_type,
-                                                 atom_size_type> {
+            atom_size_type,
+            layout_type> {
  public:
   using tiles_t = tiles_type;
   using atoms_t = atoms_type;
@@ -103,10 +59,9 @@ class setup<algorithms_t::group_mapped,
   using tile_size_t = tile_size_type;
   using atom_size_t = atom_size_type;
 
-  using tile_traits_t =
-      tile_traits<algorithms_t::group_mapped, tiles_type, tile_size_type>;
-  using atom_traits_t =
-      atom_traits<algorithms_t::group_mapped, atoms_type, atom_size_type>;
+  /// Layout view over the workload (default: CSR; supplied as a template
+  /// parameter to allow ELL/COO/custom layouts).
+  using layout_t = layout_type;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
@@ -129,19 +84,22 @@ class setup<algorithms_t::group_mapped,
   storage_t& buffer;
 
   /**
-   * @brief Construct a setup object for load balance schedule.
+   * @brief Construct a setup from a CSR-shaped offsets pointer.
    *
-   * @param tiles Tiles iterator.
-   * @param num_tiles Number of tiles.
-   * @param num_atoms Number of atoms.
+   * @param _buffer    Scratch storage in shared memory.
+   * @param _tiles     Pointer to the tile-end-offset array (size num_tiles+1).
+   * @param _num_tiles Number of tiles.
+   * @param _num_atoms Total number of atoms.
    */
   __device__ __forceinline__ setup(storage_t& _buffer,
                                    tiles_iterator_t _tiles,
                                    tile_size_t _num_tiles,
                                    atom_size_t _num_atoms)
-      : buffer(_buffer),
-        tile_traits_t(_num_tiles, _tiles),
-        atom_traits_t(_num_atoms) {}
+      : buffer(_buffer), layout_(_tiles, _num_tiles, _num_atoms) {}
+
+  /// Construct directly from a layout view.
+  __device__ __forceinline__ setup(storage_t& _buffer, layout_t _layout)
+      : buffer(_buffer), layout_(_layout) {}
 
   __device__ __forceinline__ auto partition() {
     auto g = cg::this_grid();
@@ -150,7 +108,7 @@ class setup<algorithms_t::group_mapped,
 
     auto index = g.thread_rank();
     auto tile_index = p.thread_rank() + (p.meta_group_rank() * p.size());
-    if (index < tile_traits_t::size()) {
+    if (index < layout_.num_tiles()) {
       buffer.tiles_indices[tile_index] = index;
     } else {
       buffer.tiles_indices[tile_index] = -1;
@@ -165,9 +123,8 @@ class setup<algorithms_t::group_mapped,
     auto g = cg::this_grid();
     auto index = g.thread_rank();
     atoms_t num_atoms = 0;
-    if (index < tile_traits_t::size()) {
-      num_atoms =
-          tile_traits_t::begin()[index + 1] - tile_traits_t::begin()[index];
+    if (index < layout_.num_tiles()) {
+      num_atoms = layout_.tile_size(static_cast<tiles_t>(index));
     }
 
     p_st[p.thread_rank()] = cg::exclusive_scan(p, num_atoms);
@@ -193,8 +150,8 @@ class setup<algorithms_t::group_mapped,
     auto local_id = p.thread_rank();
 
     int length = thread_id - local_id + p.size();
-    if (tile_traits_t::size() < length)
-      length = tile_traits_t::size();
+    if (static_cast<int>(layout_.num_tiles()) < length)
+      length = static_cast<int>(layout_.num_tiles());
 
     length -= thread_id - local_id;
     return length;
@@ -231,10 +188,15 @@ class setup<algorithms_t::group_mapped,
                                              partition_t& p) {
     atoms_t* p_st =
         buffer.atoms_offsets + (p.meta_group_rank() * threads_per_tile);
-    return tile_traits_t::begin()[tile_id] + v_atom - p_st[v_tile_id];
+    return layout_.tile_begin(tile_id) + v_atom - p_st[v_tile_id];
   }
 
-};  // namespace schedule
+  /// Direct read access to the underlying layout (advanced use).
+  __host__ __device__ const layout_t& layout() const { return layout_; }
+
+ private:
+  layout_t layout_;
+};
 
 template <std::size_t threads_per_block, typename tiles_t, typename atoms_t>
 using warp_mapped =

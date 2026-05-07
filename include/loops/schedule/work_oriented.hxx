@@ -14,6 +14,7 @@
 
 #include <loops/stride_ranges.hxx>
 #include <loops/util/math.hxx>
+#include <loops/container/layout.hxx>
 
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>
@@ -23,66 +24,6 @@
 
 namespace loops {
 namespace schedule {
-
-/**
- * @brief Traits for Atom.
- *
- * @todo Implement an atom iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam atoms_type Type of the atoms.
- * @tparam atom_size_type Type of the atom size.
- */
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::work_oriented, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-/**
- * @brief Traits for Tile.
- *
- * @todo Implement an tile iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam tiles_type Type of the tiles.
- * @tparam tile_size_type Type of the tile size (default: std::size_t).
- */
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::work_oriented, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
 
 /**
  * @brief Work-oriented schedule's setup interface.
@@ -99,31 +40,27 @@ template <std::size_t THREADS_PER_BLOCK,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename layout_type>
 class setup<algorithms_t::work_oriented,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algorithms_t::work_oriented,
-                                                 tiles_type,
-                                                 tile_size_type>,
-                              public atom_traits<algorithms_t::work_oriented,
-                                                 atoms_type,
-                                                 atom_size_type> {
+            atom_size_type,
+            layout_type> {
  public:
-  using tiles_t = tiles_type;          /// Tile Type
-  using atoms_t = atoms_type;          /// Atom Type
-  using tiles_iterator_t = tiles_t*;   /// Tile Iterator Type
-  using atoms_iterator_t = atoms_t*;   /// Atom Iterator Type
-  using tile_size_t = tile_size_type;  /// Tile Size Type
-  using atom_size_t = atom_size_type;  /// Atom Size Type
+  using tiles_t = tiles_type;
+  using atoms_t = atoms_type;
+  using tiles_iterator_t = tiles_t*;
+  using atoms_iterator_t = atoms_t*;
+  using tile_size_t = tile_size_type;
+  using atom_size_t = atom_size_type;
 
-  using tile_traits_t =
-      tile_traits<algorithms_t::work_oriented, tiles_type, tile_size_type>;
-  using atom_traits_t =
-      atom_traits<algorithms_t::work_oriented, atoms_type, atom_size_type>;
+  /// Layout view over the workload (default: CSR; supplied as a template
+  /// parameter to allow ELL/COO/custom layouts).
+  using layout_t = layout_type;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
@@ -132,18 +69,24 @@ class setup<algorithms_t::work_oriented,
   };
 
   /**
-   * @brief Construct a setup object for load balance schedule.
+   * @brief Construct a setup from a CSR-shaped offsets pointer.
    *
-   * @param tiles Tiles iterator.
-   * @param num_tiles Number of tiles.
-   * @param num_atoms Number of atoms.
+   * @param _tiles     Pointer to the tile-end-offset array (size num_tiles+1).
+   * @param _num_tiles Number of tiles.
+   * @param _num_atoms Total number of atoms.
    */
   __device__ __forceinline__ setup(tiles_iterator_t _tiles,
                                    tile_size_t _num_tiles,
                                    atom_size_t _num_atoms)
-      : tile_traits_t(_num_tiles, _tiles),
-        atom_traits_t(_num_atoms),
+      : layout_(_tiles, _num_tiles, _num_atoms),
         total_work(_num_tiles + _num_atoms),
+        num_threads(gridDim.x * threads_per_block),
+        work_per_thread(math::ceil_div(total_work, num_threads)) {}
+
+  /// Construct directly from a layout view.
+  __device__ __forceinline__ explicit setup(layout_t _layout)
+      : layout_(_layout),
+        total_work(_layout.num_tiles() + _layout.num_atoms()),
         num_threads(gridDim.x * threads_per_block),
         work_per_thread(math::ceil_div(total_work, num_threads)) {}
 
@@ -158,10 +101,14 @@ class setup<algorithms_t::work_oriented,
         min(atom_size_t(upper + work_per_thread), atom_size_t(total_work));
 
     /// Search across the diagonals to find coordinates to process.
-    auto st = search(upper, tile_traits_t::begin() + 1, atoms_indices,
-                     tile_traits_t::size(), atom_traits_t::size());
-    auto en = search(lower, tile_traits_t::begin() + 1, atoms_indices,
-                     tile_traits_t::size(), atom_traits_t::size());
+    /// Explicit casts unify offset_t for template deduction (layout reports
+    /// counts in its native int-ish type; the search wants atom_size_t).
+    auto st = search(upper, layout_.tile_end_iter(), atoms_indices,
+                     static_cast<atom_size_t>(layout_.num_tiles()),
+                     static_cast<atom_size_t>(layout_.num_atoms()));
+    auto en = search(lower, layout_.tile_end_iter(), atoms_indices,
+                     static_cast<atom_size_t>(layout_.num_tiles()),
+                     static_cast<atom_size_t>(layout_.num_atoms()));
 
     return thrust::make_pair(st, en);
   }
@@ -174,7 +121,7 @@ class setup<algorithms_t::work_oriented,
 
   template <typename map_t>
   __device__ __forceinline__ step_range_t<atoms_t> atoms(tiles_t t, map_t& m) {
-    atoms_t nz_next_start = tile_traits_t::begin()[(t + 1)];
+    atoms_t nz_next_start = layout_.tile_end(t);
     atoms_t nz_start = m.first.second;
     m.first.second += (nz_next_start - nz_start);
     return custom_stride_range(nz_start, nz_next_start, atoms_t(1));
@@ -231,6 +178,12 @@ class setup<algorithms_t::work_oriented,
     return thrust::make_pair(min(*it, a_len), (diagonal - *it));
   }
 
+ public:
+  /// Direct read access to the underlying layout (advanced use).
+  __host__ __device__ const layout_t& layout() const { return layout_; }
+
+ private:
+  layout_t layout_;
   std::size_t total_work;
   std::size_t num_threads;
   std::size_t work_per_thread;

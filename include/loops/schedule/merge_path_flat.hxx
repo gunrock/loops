@@ -19,6 +19,7 @@
 #include <loops/util/device.hxx>
 
 #include <loops/container/coordinate.hxx>
+#include <loops/container/layout.hxx>
 
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/execution_policy.h>
@@ -29,93 +30,28 @@ namespace schedule {
 
 using coord_t = coordinate_t<unsigned int>;
 
-/**
- * @brief Traits for Atom.
- *
- * @todo Implement an atom iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam atoms_type Type of the atoms.
- * @tparam atom_size_type Type of the atom size.
- */
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::merge_path_flat, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-/**
- * @brief Traits for Tile.
- *
- * @todo Implement an tile iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam tiles_type Type of the tiles.
- * @tparam tile_size_type Type of the tile size (default: std::size_t).
- */
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::merge_path_flat, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
-
 namespace merge_path {
 /**
- * @brief CUB's implementation, generalized. Identifies merge path starting
- * coordinates for each tile.
+ * @brief Per-block merge-path search kernel.
  *
- * @tparam THREADS_PER_BLOCK
- * @tparam ITEMS_PER_THREAD
- * @tparam tiles_t
- * @tparam tile_size_t
- * @tparam atom_size_t
- * @param tiles
- * @param num_tiles
- * @param num_atoms
- * @param d_tile_coordinates
- * @return __global__
+ * Layout-generic version of CUB's diagonal search: for each merge-path tile,
+ * find the starting (tile_id, atom_id) coordinate by binary-searching the
+ * layout's `tile_end_iter` against a counting iterator over atoms. The result
+ * is materialized into `d_tile_coordinates` so the main kernel can skip the
+ * search at runtime.
  */
 template <std::size_t THREADS_PER_BLOCK,
           std::size_t ITEMS_PER_THREAD,
-          typename tiles_t,
-          typename atoms_t,
+          typename layout_t,
           typename tile_size_t,
           typename atom_size_t>
-__global__ void generate_search_coordinates(tiles_t* tiles,
+__global__ void generate_search_coordinates(layout_t layout,
                                             tile_size_t num_tiles,
                                             atom_size_t num_atoms,
                                             std::size_t num_merge_tiles,
                                             coord_t* d_tile_coordinates) {
+  using atoms_t = typename layout_t::atom_id_t;
+
   enum : unsigned int {
     items_per_tile = THREADS_PER_BLOCK * ITEMS_PER_THREAD,
   };
@@ -129,8 +65,9 @@ __global__ void generate_search_coordinates(tiles_t* tiles,
     coord_t tile_coordinate;
 
     // Search the merge path (block-wide.)
-    tile_coordinate = search::_binary_search(diagonal, tiles + 1, atoms_indices,
-                                             num_tiles, num_atoms);
+    tile_coordinate = search::_binary_search(diagonal, layout.tile_end_iter(),
+                                             atoms_indices, num_tiles,
+                                             num_atoms);
 
     // Output starting offset
     d_tile_coordinates[tile_idx] = tile_coordinate;
@@ -138,42 +75,47 @@ __global__ void generate_search_coordinates(tiles_t* tiles,
 }
 
 /**
- * @brief Work-oriented schedule's preprocess interface.
+ * @brief Merge-path preprocess (host-side helper).
+ *
+ * Computes per-block starting coordinates ahead of time so the main kernel
+ * can skip its diagonal search. Layout-generic: any layout view satisfying
+ * the contract in `loops/container/layout.hxx` works.
  *
  * @tparam THREADS_PER_BLOCK Threads per block.
- * @tparam ITEMS_PER_THREAD Number of Items per thread to process.
- * @tparam tiles_type Type of the tiles.
- * @tparam atoms_type Type of the atoms.
- * @tparam tile_size_type Type of the tile size.
- * @tparam atom_size_type Type of the atom size.
+ * @tparam ITEMS_PER_THREAD  Number of items per thread to process.
+ * @tparam tiles_type        Tile-id type (used for back-compat ctor).
+ * @tparam atoms_type        Atom-id type (used for back-compat ctor).
+ * @tparam tile_size_type    Counter type for tiles.
+ * @tparam atom_size_type    Counter type for atoms.
  */
 template <std::size_t THREADS_PER_BLOCK,
           std::size_t ITEMS_PER_THREAD,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename layout_type = layout::csr<tiles_type, atoms_type>>
 class preprocess_t {
  public:
-  using tiles_t = tiles_type;          /// Tile Type
-  using atoms_t = atoms_type;          /// Atom Type
-  using tiles_iterator_t = tiles_t*;   /// Tile Iterator Type
-  using atoms_iterator_t = atoms_t*;   /// Atom Iterator Type
-  using tile_size_t = tile_size_type;  /// Tile Size Type
-  using atom_size_t = atom_size_type;  /// Atom Size Type
+  using tiles_t = tiles_type;
+  using atoms_t = atoms_type;
+  using tiles_iterator_t = tiles_t*;
+  using atoms_iterator_t = atoms_t*;
+  using tile_size_t = tile_size_type;
+  using atom_size_t = atom_size_type;
+  using layout_t = layout_type;
 
-  /**
-   * @brief Construct a preprocess object for load balance schedule.
-   *
-   * @param tiles Tiles iterator.
-   * @param num_tiles Number of tiles.
-   * @param num_atoms Number of atoms.
-   */
+  /// Construct from a CSR-shaped offsets pointer (back-compat shortcut;
+  /// only valid when @c layout_type is @c layout::csr ).
   preprocess_t(tiles_iterator_t _tiles,
                tile_size_t _num_tiles,
                atom_size_t _num_atoms,
                cudaStream_t stream = 0)
-      : total_work(_num_tiles + _num_atoms),
+      : preprocess_t(layout_t(_tiles, _num_tiles, _num_atoms), stream) {}
+
+  /// Construct directly from a layout view (any layout type).
+  preprocess_t(layout_t _layout, cudaStream_t stream = 0)
+      : total_work(_layout.num_tiles() + _layout.num_atoms()),
         num_merge_tiles(
             math::ceil_div(total_work, THREADS_PER_BLOCK * ITEMS_PER_THREAD)),
         d_tile_coordinates(nullptr) {
@@ -186,7 +128,7 @@ class preprocess_t {
     dim3 grid_size = math::ceil_div(num_merge_tiles + 1, block_size);
 
     // Use separate search kernel if we have enough tiles to saturate the
-    // device. This will pre-calculated the bounds per block, which can
+    // device. This will pre-calculate the bounds per block, which can
     // then be used inside our actual load-balanced kernel to compute faster.
     if (grid_size.x >= sm_count) {
       tile_coordinates.resize(num_merge_tiles + 1);
@@ -197,11 +139,10 @@ class preprocess_t {
 
       auto kernel =
           generate_search_coordinates<THREADS_PER_BLOCK, ITEMS_PER_THREAD,
-                                      tiles_t, atoms_t, tile_size_t,
-                                      atom_size_t>;
-      launch::non_cooperative(stream, kernel, grid_size, block_size, _tiles,
-                              _num_tiles, _num_atoms, num_merge_tiles,
-                              d_tile_coordinates);
+                                      layout_t, tile_size_t, atom_size_t>;
+      launch::non_cooperative(stream, kernel, grid_size, block_size, _layout,
+                              _layout.num_tiles(), _layout.num_atoms(),
+                              num_merge_tiles, d_tile_coordinates);
     }
   }
 
@@ -246,37 +187,31 @@ template <std::size_t THREADS_PER_BLOCK,
           typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename layout_type>
 class setup<algorithms_t::merge_path_flat,
             THREADS_PER_BLOCK,
             ITEMS_PER_THREAD,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algorithms_t::merge_path_flat,
-                                                 tiles_type,
-                                                 tile_size_type>,
-                              public atom_traits<algorithms_t::merge_path_flat,
-                                                 atoms_type,
-                                                 atom_size_type> {
+            atom_size_type,
+            layout_type> {
  public:
-  using tiles_t = tiles_type;          /// Tile Type
-  using atoms_t = atoms_type;          /// Atom Type
-  using tiles_iterator_t = tiles_t*;   /// Tile Iterator Type
-  using atoms_iterator_t = atoms_t*;   /// Atom Iterator Type
-  using tile_size_t = tile_size_type;  /// Tile Size Type
-  using atom_size_t = atom_size_type;  /// Atom Size Type
+  using tiles_t = tiles_type;
+  using atoms_t = atoms_type;
+  using tiles_iterator_t = tiles_t*;
+  using atoms_iterator_t = atoms_t*;
+  using tile_size_t = tile_size_type;
+  using atom_size_t = atom_size_type;
+  using layout_t = layout_type;
   using meta_t = merge_path::preprocess_t<THREADS_PER_BLOCK,
                                           ITEMS_PER_THREAD,
                                           tiles_type,
                                           atoms_type,
                                           tile_size_type,
-                                          atom_size_type>;
-
-  using tile_traits_t =
-      tile_traits<algorithms_t::merge_path_flat, tiles_type, tile_size_type>;
-  using atom_traits_t =
-      atom_traits<algorithms_t::merge_path_flat, atoms_type, atom_size_type>;
+                                          atom_size_type,
+                                          layout_type>;
 
   enum : unsigned int {
     threads_per_block = THREADS_PER_BLOCK,
@@ -297,26 +232,36 @@ class setup<algorithms_t::merge_path_flat,
   thrust::counting_iterator<tiles_t> tiles_counting_it;
 
   /**
-   * @brief Construct a setup object for load balance schedule.
+   * @brief Construct a setup from a CSR-shaped offsets pointer.
    *
-   * @param tiles Tiles iterator.
-   * @param num_tiles Number of tiles.
-   * @param num_atoms Number of atoms.
+   * @param _meta      Pre-computed merge-path metadata.
+   * @param _buffer    Scratch storage in shared memory.
+   * @param _tiles     Pointer to the tile-end-offset array (size num_tiles+1).
+   * @param _num_tiles Number of tiles.
+   * @param _num_atoms Total number of atoms.
    */
   __device__ __forceinline__ setup(meta_t& _meta,
                                    storage_t& _buffer,
                                    tiles_iterator_t _tiles,
                                    tile_size_t _num_tiles,
                                    atom_size_t _num_atoms)
-      : tile_traits_t(_num_tiles, _tiles),
-        atom_traits_t(_num_atoms),
+      : layout_(_tiles, _num_tiles, _num_atoms),
         meta(_meta),
         buffer(_buffer),
-        total_work(_num_tiles + _num_atoms),  // num_merge_items
-        merge_tile_size(items_per_tile),      // merge_tile_size
-        num_merge_tiles(
-            math::ceil_div(total_work, merge_tile_size))  // num_merge_tiles
-  {}
+        total_work(_num_tiles + _num_atoms),
+        merge_tile_size(items_per_tile),
+        num_merge_tiles(math::ceil_div(total_work, merge_tile_size)) {}
+
+  /// Construct directly from a layout view.
+  __device__ __forceinline__ setup(meta_t& _meta,
+                                   storage_t& _buffer,
+                                   layout_t _layout)
+      : layout_(_layout),
+        meta(_meta),
+        buffer(_buffer),
+        total_work(_layout.num_tiles() + _layout.num_atoms()),
+        merge_tile_size(items_per_tile),
+        num_merge_tiles(math::ceil_div(total_work, merge_tile_size)) {}
 
   __device__ __forceinline__ auto init() {
     /// Calculate the diagonals.
@@ -336,9 +281,13 @@ class setup<algorithms_t::merge_path_flat,
         thrust::counting_iterator<atoms_t> atoms_indices(0);
 
         /// Search across the diagonals to find coordinates to process.
+        /// Explicit casts unify offset_t for template deduction (layout
+        /// reports counts in its native int-ish type; the search wants
+        /// atom_size_t).
         coord_t st = search::_binary_search(
-            diagonal, (tile_traits_t::begin() + 1), atoms_indices,
-            tile_traits_t::size(), atom_traits_t::size());
+            diagonal, layout_.tile_end_iter(), atoms_indices,
+            static_cast<atom_size_t>(layout_.num_tiles()),
+            static_cast<atom_size_t>(layout_.num_atoms()));
 
         buffer.tile_coords[threadIdx.x] = st;
       } else {
@@ -353,7 +302,7 @@ class setup<algorithms_t::merge_path_flat,
     tile_num_tiles = tile_end_coord.x - tile_start_coord.x;
     tile_num_atoms = tile_end_coord.y - tile_start_coord.y;
 
-    tiles_iterator_t end_offsets = tile_traits_t::begin() + 1;
+    auto end_offsets = layout_.tile_end_iter();
 
     /// Gather the row end-offsets for the merge tile into shared memory.
     for (int item = threadIdx.x;  // first thread of the block.
@@ -361,7 +310,7 @@ class setup<algorithms_t::merge_path_flat,
          item += threads_per_block)                 // stride by block dim.
     {
       const int offset = min(static_cast<int>(tile_start_coord.x + item),
-                             static_cast<int>(tile_traits_t::size() - 1));
+                             static_cast<int>(layout_.num_tiles() - 1));
       buffer.tile_end_offset[item] = end_offsets[offset];
     }
 
@@ -406,7 +355,8 @@ class setup<algorithms_t::merge_path_flat,
    * @return atoms_t Return the atom index.
    */
   __device__ __forceinline__ atoms_t atom_idx(int vid, coord_t& coord) {
-    return min(atoms_counting_it[coord.y], int(atom_traits_t::size()) - 1);
+    return min(atoms_counting_it[coord.y],
+               static_cast<int>(layout_.num_atoms()) - 1);
   }
 
   /**
@@ -427,7 +377,11 @@ class setup<algorithms_t::merge_path_flat,
     return tile_num_atoms;
   }
 
+  /// Direct read access to the underlying layout (advanced use).
+  __host__ __device__ const layout_t& layout() const { return layout_; }
+
  private:
+  layout_t layout_;
   std::size_t total_work;
   std::size_t merge_tile_size;
   std::size_t num_merge_tiles;
