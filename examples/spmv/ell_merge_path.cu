@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 
   vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
 
   auto timer = algorithms::spmv::ell_merge_path(ell, x, y);
 

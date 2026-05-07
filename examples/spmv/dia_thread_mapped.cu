@@ -30,11 +30,34 @@ int main(int argc, char** argv) {
   parameters_t parameters(argc, argv);
   matrix_market_t<index_t, offset_t, type_t> mtx;
   csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
-  dia_t<index_t, offset_t, type_t> dia(csr);
+
+  // DIA degenerates to dense storage on unstructured matrices (one diagonal
+  // per stored (col-row) value). Probe the diagonal count up-front so we can
+  // bail out with a structured message instead of OOM-killing the process.
+  // 4 GiB is generous for a single dense buffer; matrices that would need
+  // more should pick a different layout.
+  using dia_type = dia_t<index_t, offset_t, type_t>;
+  const std::size_t num_diagonals = dia_type::count_diagonals(csr);
+  const std::size_t bytes = num_diagonals * csr.rows * sizeof(type_t);
+  constexpr std::size_t kMaxDiaBytes = std::size_t{4} << 30;  // 4 GiB
+  if (bytes > kMaxDiaBytes) {
+    std::cout << "dia_thread_mapped," << mtx.dataset << "," << csr.rows << ","
+              << csr.cols << "," << csr.nnzs
+              << ",num_diagonals=" << num_diagonals
+              << ",SKIP_TOO_LARGE_FOR_DIA" << std::endl;
+    std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
+              << std::endl;
+    std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
+              << csr.nnzs << ")" << std::endl;
+    std::cout << "Errors:\t\tSKIP" << std::endl;
+    return 0;
+  }
+
+  dia_type dia(csr);
 
   vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
 
   auto timer = algorithms::spmv::dia_thread_mapped(dia, x, y);
 

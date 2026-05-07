@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
   vector_t<type_t> y(csr.rows);
 
   // Generate random numbers between [0, 1].
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
 
   // Run the benchmark.
   util::timer_t timer;

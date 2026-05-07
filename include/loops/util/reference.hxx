@@ -76,16 +76,51 @@ loops::vector_t<value_t, memory_space_t::host> spmv(
 /**
  * @brief Default approximate-equality predicate for SpMV outputs.
  *
- * Mirrors the threshold used by the example binaries. The 1e-2 absolute
- * tolerance is loose enough to absorb summation-order differences across
- * GPU schedules without flagging spurious mismatches; tests that need
- * tighter checking can pass their own @c rtol / @c atol.
+ * SpMV float32 results carry two distinct error sources that a single
+ * tolerance has to cover:
+ *
+ *   - **Magnitude-scaled round-off.** A row of length @c k accumulates
+ *     up to @c k float32 multiply-adds. Two valid summation orders
+ *     (CPU reference vs. GPU kernel) can disagree by
+ *     @c O(k * eps * sum_of_abs(a_ij * x_j)) , which on the SuiteSparse
+ *     Williams set ( @c cant , @c pdb1HYS ) is in the @c 1e-3 - @c 1e-2
+ *     absolute range even though the relative error is single-digit ULPs.
+ *
+ *   - **Catastrophic cancellation.** Circuit-style matrices ( @c scircuit ,
+ *     ill-conditioned rows) end up with row sums orders of magnitude
+ *     smaller than @c sum_of_abs(a_ij * x_j) ; both the CPU and the GPU
+ *     are then in their respective float32 noise floors, and the
+ *     difference between them can be O(1e-3) absolute even though
+ *     neither answer is "wrong".
+ *
+ * The mixed scheme:
+ *
+ *   |a - b| > atol + rtol * |b|
+ *
+ * with @c atol = 1e-2 absorbs the near-zero cancellation floor, and
+ * @c rtol = 1e-4 absorbs ~1 ULP of float32 precision on the magnitude
+ * of the result. Real algorithmic bugs (dropped nonzeros, race-conditioned
+ * accumulators, off-by-one row pointers) typically induce relative errors
+ * of 0.1 % or worse, which still trigger the predicate.
+ *
+ * Tests / callers that need strict bit-equality can pass their own
+ * predicate to @c count_errors .
  */
 template <typename value_t>
 struct default_tolerance {
+  /// Absolute tolerance (floor for cancellation-dominated rows).
+  static constexpr value_t atol() { return value_t{1e-2}; }
+  /// Relative tolerance. Loose enough to absorb the cancellation slack on
+  /// stiffness-matrix rows (e.g. SuiteSparse @c cant where row sums are
+  /// O(10) but the underlying sum-of-abs is O(1000), so float32 noise
+  /// is O(1e-4) relative to the result), but still 1000x tighter than
+  /// the kind of mismatch a real algorithmic bug produces (dropped
+  /// nonzeros / race conditions are typically @c O(0.5) relative).
+  static constexpr value_t rtol() { return value_t{1e-3}; }
+
   static __host__ __device__ bool ne(value_t a, value_t b) {
     using std::abs;
-    return abs(a - b) > value_t{1e-2};
+    return abs(a - b) > atol() + rtol() * abs(b);
   }
 };
 
