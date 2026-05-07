@@ -40,8 +40,14 @@ The four scheduling algorithms (`thread_mapped`, `group_mapped`, `work_oriented`
 
 In-tree layouts:
 
-- `loops::layout::csr<tile_id_t, atom_id_t>` — backed by a row-offset prefix-sum array (the default).
-- `loops::layout::ell<tile_id_t, atom_id_t>` — uniform pitch per row, no offsets array; `tile_end_iter()` is a `thrust::transform_iterator` synthesized on the fly.
+| Layout | Tile is a... | Atom is a... | Backing container | Example |
+| --- | --- | --- | --- | --- |
+| `layout::csr<tile_id_t, atom_id_t>` | row | nonzero | `csr_t` | `spmv.thread_mapped`, `spmv.merge_path`, ... |
+| `layout::csc<tile_id_t, atom_id_t>` | column | nonzero | `csc_t` | `spmv.csc_thread_mapped` |
+| `layout::coo<tile_id_t, atom_id_t>` | nonzero | nonzero | `coo_t` | `spmv.coo_thread_mapped` |
+| `layout::ell<tile_id_t, atom_id_t>` | row | bucketed nonzero (uniform pitch) | `ell_t` | `spmv.ell_thread_mapped`, `spmv.ell_merge_path` |
+| `layout::bcsr<tile_id_t, atom_id_t>` | block-row | dense `R x C` block | `bcsr_t<R, C, ...>` | `spmv.bcsr_thread_mapped` |
+| `layout::dia<tile_id_t, atom_id_t>` | row | (row, diagonal) cell | `dia_t` | `spmv.dia_thread_mapped` |
 
 To plug in your own format, write a struct satisfying the contract documented in [`include/loops/container/layout.hxx`](include/loops/container/layout.hxx) and pass it as the trailing template argument to `schedule::setup<...>`. A worked example lives in [`examples/spmv/custom_layout.cu`](examples/spmv/custom_layout.cu).
 
