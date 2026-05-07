@@ -12,6 +12,7 @@
 #pragma once
 
 #include <loops/util/generate.hxx>
+#include <loops/util/reference.hxx>
 #include <loops/container/formats.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/container/market.hxx>
@@ -85,58 +86,22 @@ using namespace loops;
 using namespace loops::memory;
 
 /**
- * @brief CPU SpMV implementation.
+ * @brief Example-side validation: compute the host CSR reference, count
+ * mismatches against the GPU result, and print a one-line summary.
  *
- * @tparam index_t
- * @tparam offset_t
- * @tparam type_t
- * @param csr device CSR matrix.
- * @param x device input vector.
- * @return loops::vector_t<type_t, memory_space_t::host> device output vector.
- */
-template <typename index_t, typename offset_t, typename type_t>
-loops::vector_t<type_t, memory_space_t::host> reference(
-    loops::csr_t<index_t, offset_t, type_t, memory_space_t::device>& csr,
-    loops::vector_t<type_t, memory_space_t::device>& x) {
-  // Copy data to CPU.
-  loops::csr_t<index_t, offset_t, type_t, memory_space_t::host> csr_h(csr);
-  loops::vector_t<type_t, memory_space_t::host> x_h(x);
-  loops::vector_t<type_t, memory_space_t::host> y_h(x_h.size());
-
-  for (auto row = 0; row < csr_h.rows; ++row) {
-    type_t sum = 0;
-    for (auto nz = csr_h.offsets[row]; nz < csr_h.offsets[row + 1]; ++nz) {
-      sum += csr_h.values[nz] * x_h[csr_h.indices[nz]];
-    }
-    y_h[row] = sum;
-  }
-
-  return y_h;
-}
-
-/**
- * @brief Validation for SpMV.
- *
- * @tparam index_t Column indices type.
- * @tparam offset_t Row offset type.
- * @tparam type_t Value type.
- * @param parameters Parameters.
- * @param csr CSR matrix.
- * @param x Input vector.
- * @param y Output vector.
+ * Both the reference computation and the mismatch counting live in
+ * @c loops::reference (see @c include/loops/util/reference.hxx ); this
+ * thin wrapper exists so the example binaries can keep the pretty
+ * "Matrix / Dimensions / Errors" stdout block the test harness scrapes.
  */
 template <typename index_t, typename offset_t, typename type_t>
 void validate(parameters_t& parameters,
               csr_t<index_t, offset_t, type_t>& csr,
               vector_t<type_t>& x,
               vector_t<type_t>& y) {
-  // Validation code, can be safely ignored.
-  auto h_y = reference(csr, x);
-
-  std::size_t errors = util::equal(
-      y.data().get(), h_y.data(), csr.rows,
-      [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
-      parameters.verbose);
+  auto h_y = loops::reference::spmv(csr, x);
+  std::size_t errors = loops::reference::count_errors(
+      y.data().get(), h_y.data(), csr.rows, parameters.verbose);
 
   std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
             << std::endl;
