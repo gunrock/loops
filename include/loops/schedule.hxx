@@ -13,6 +13,8 @@
 
 #include <cstddef>
 
+#include <loops/container/layout.hxx>
+
 namespace loops {
 namespace schedule {
 
@@ -28,22 +30,26 @@ enum algorithms_t {
   bucketing,        /// < Bucketing scheduling algorithm.
 };
 
-template <algorithms_t scheme, typename atoms_t, typename atom_size_t>
-class atom_traits;
-
-template <algorithms_t scheme, typename tiles_t, typename tile_size_t>
-class tile_traits;
-
 /**
  * @brief Schedule's setup interface.
  *
- * @tparam scheme The scheduling algorithm.
+ * Schedules consume the workload through a layout view (see
+ * `loops/container/layout.hxx`). The 5+ method layout contract is what makes
+ * the schedules format-generic: the same setup specialization handles CSR,
+ * COO, ELL, or any user-defined layout that satisfies the contract.
+ *
+ * The `layout_type` template parameter defaults to
+ * `layout::csr<tiles_t, atoms_t>` for backward compatibility with the
+ * original CSR-only API; pass a different layout view to swap formats.
+ *
+ * @tparam scheme            The scheduling algorithm.
  * @tparam threads_per_block Number of threads per block.
- * @tparam threads_per_tile Number of threads per tile.
- * @tparam tiles_t Type of the tiles.
- * @tparam atoms_t Type of the atoms.
- * @tparam tile_size_t Type of the tile size (default: std::size_t).
- * @tparam atom_size_t Type of the atom size (default: std::size_t).
+ * @tparam threads_per_tile  Number of threads per tile.
+ * @tparam tiles_t           Tile-id type (e.g., row id).
+ * @tparam atoms_t           Atom-id type (e.g., flat nnz position).
+ * @tparam tile_size_t       Type of the tile size (default: std::size_t).
+ * @tparam atom_size_t       Type of the atom size (default: std::size_t).
+ * @tparam layout_type       Layout view (default: layout::csr).
  */
 template <algorithms_t scheme,
           std::size_t threads_per_block,
@@ -51,7 +57,8 @@ template <algorithms_t scheme,
           typename tiles_t,
           typename atoms_t,
           typename tile_size_t = std::size_t,
-          typename atom_size_t = std::size_t>
+          typename atom_size_t = std::size_t,
+          typename layout_type = layout::csr<tiles_t, atoms_t>>
 class setup;
 
 }  // namespace schedule

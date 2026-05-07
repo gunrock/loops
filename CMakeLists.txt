@@ -163,7 +163,7 @@ endif()
 
 if(LOOPS_BUILD_TESTS)
   enable_testing()
-  include(${PROJECT_SOURCE_DIR}/cmake/FetchGoogleTest.cmake)
+  include(${PROJECT_SOURCE_DIR}/cmake/FetchCatch2.cmake)
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/unittests/CMakeLists.txt"
      AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/unittests")
     file(SIZE "${CMAKE_CURRENT_SOURCE_DIR}/unittests/CMakeLists.txt" _ut_size)

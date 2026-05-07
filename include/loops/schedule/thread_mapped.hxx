@@ -1,9 +1,9 @@
 /**
  * @file thread_mapped.hxx
  * @author Muhammad Osama (mosama@ucdavis.edu)
- * @brief
- * @version 0.1
- * @date 2022-02-04
+ * @brief Thread-mapped schedule (one thread per tile).
+ * @version 0.2
+ * @date 2026-05-05
  *
  * @copyright Copyright (c) 2022
  *
@@ -13,156 +13,119 @@
 
 #include <loops/stride_ranges.hxx>
 #include <loops/schedule.hxx>
+#include <loops/container/layout.hxx>
 
 namespace loops {
 namespace schedule {
 
 /**
- * @brief Traits for Atom.
- *
- * @todo Implement an atom iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam atoms_type Type of the atoms.
- * @tparam atom_size_type Type of the atom size.
- */
-template <typename atoms_type, typename atom_size_type>
-class atom_traits<algorithms_t::thread_mapped, atoms_type, atom_size_type> {
- public:
-  using atoms_t = atoms_type;
-  using atoms_iterator_t = atoms_t*;
-  using atom_size_t = atom_size_type;
-
-  __host__ __device__ atom_traits() : size_(0), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size)
-      : size_(size), atoms_(nullptr) {}
-  __host__ __device__ atom_traits(atom_size_t size, atoms_iterator_t atoms)
-      : size_(size), atoms_(atoms) {}
-
-  __host__ __device__ atom_size_t size() const { return size_; }
-  __host__ __device__ atoms_iterator_t begin() { return atoms_; };
-  __host__ __device__ atoms_iterator_t end() { return atoms_ + size_; };
-
- private:
-  atom_size_t size_;
-  atoms_iterator_t atoms_;
-};
-
-/**
- * @brief Traits for Tile.
- *
- * @todo Implement an tile iterator, right now it is based on CSR only. Can be
- * abstracted very simply by allowing UDF iterators.
- *
- * @tparam tiles_type Type of the tiles.
- * @tparam tile_size_type Type of the tile size (default: std::size_t).
- */
-template <typename tiles_type, typename tile_size_type>
-class tile_traits<algorithms_t::thread_mapped, tiles_type, tile_size_type> {
- public:
-  using tiles_t = tiles_type;
-  using tiles_iterator_t = tiles_t*;
-  using tile_size_t = tile_size_type;
-
-  __host__ __device__ tile_traits() : size_(0), tiles_(nullptr) {}
-  __host__ __device__ tile_traits(tile_size_t size, tiles_iterator_t tiles)
-      : size_(size), tiles_(tiles) {}
-
-  __host__ __device__ tile_size_t size() const { return size_; }
-  __host__ __device__ tiles_iterator_t begin() { return tiles_; };
-  __host__ __device__ tiles_iterator_t end() { return tiles_ + size_; };
-
- private:
-  tile_size_t size_;
-  tiles_iterator_t tiles_;
-};
-
-/**
  * @brief Thread-mapped schedule's setup interface.
  *
- * @tparam tiles_type Type of the tiles.
- * @tparam atoms_type Type of the atoms.
- * @tparam tile_size_type Type of the tile size.
- * @tparam atom_size_type Type of the atom size.
+ * Each thread is responsible for one tile and walks the atoms of that tile
+ * sequentially. The schedule consumes the workload through a layout view
+ * (default: `layout::csr`) so it can be reused across CSR / COO / ELL /
+ * user-defined sparse formats without modification.
+ *
+ * @tparam tiles_type      Tile-id storage type (e.g., row-id).
+ * @tparam atoms_type      Atom-id storage type (e.g., flat nnz position).
+ * @tparam tile_size_type  Counter type for tiles.
+ * @tparam atom_size_type  Counter type for atoms.
+ * @tparam layout_type     Layout view (default: layout::csr).
  */
 template <typename tiles_type,
           typename atoms_type,
           typename tile_size_type,
-          typename atom_size_type>
+          typename atom_size_type,
+          typename layout_type>
 class setup<algorithms_t::thread_mapped,
             1,
             1,
             tiles_type,
             atoms_type,
             tile_size_type,
-            atom_size_type> : public tile_traits<algorithms_t::thread_mapped,
-                                                 tiles_type,
-                                                 tile_size_type>,
-                              public atom_traits<algorithms_t::thread_mapped,
-                                                 atoms_type,
-                                                 atom_size_type> {
+            atom_size_type,
+            layout_type> {
  public:
-  using tiles_t = tiles_type;          /// Tile Type
-  using atoms_t = atoms_type;          /// Atom Type
-  using tiles_iterator_t = tiles_t*;   /// Tile Iterator Type
-  using atoms_iterator_t = atoms_t*;   /// Atom Iterator Type
-  using tile_size_t = tile_size_type;  /// Tile Size Type
-  using atom_size_t = atom_size_type;  /// Atom Size Type
+  using tiles_t = tiles_type;
+  using atoms_t = atoms_type;
+  using tiles_iterator_t = tiles_t*;
+  using atoms_iterator_t = atoms_t*;
+  using tile_size_t = tile_size_type;
+  using atom_size_t = atom_size_type;
 
-  using tile_traits_t =
-      tile_traits<algorithms_t::thread_mapped, tiles_type, tile_size_type>;
-  using atom_traits_t =
-      atom_traits<algorithms_t::thread_mapped, atoms_type, atom_size_type>;
+  /// Layout view over the workload. Defaults to CSR but is supplied as a
+  /// template parameter; users may pass any layout that satisfies the
+  /// contract in `loops/container/layout.hxx` (CSR, ELL, custom, ...).
+  using layout_t = layout_type;
 
-  /**
-   * @brief Default constructor.
-   *
-   */
-  __host__ __device__ setup() : tile_traits_t(), atom_traits_t() {}
+  /// Default constructor produces an empty schedule.
+  __host__ __device__ setup() : layout_() {}
 
   /**
-   * @brief Construct a setup object for load balance schedule.
+   * @brief Construct a setup from a CSR-shaped offsets pointer.
    *
-   * @param tiles Tiles iterator.
-   * @param num_tiles Number of tiles.
-   * @param num_atoms Number of atoms.
+   * Equivalent to constructing a `layout::csr` view internally.
+   *
+   * @param tiles      Pointer to the tile-end-offset array (size num_tiles+1).
+   * @param num_tiles  Number of tiles.
+   * @param num_atoms  Total number of atoms.
    */
   __host__ __device__ setup(tiles_t* tiles,
                             tile_size_t num_tiles,
                             atom_size_t num_atoms)
-      : tile_traits_t(num_tiles, tiles), atom_traits_t(num_atoms) {}
+      : layout_(tiles, num_tiles, num_atoms) {}
 
   /**
-   * @brief Creates a range of tiles to process within a for loop.
+   * @brief Construct a setup directly from a layout view.
    *
-   * @example The following code snippet shows how to use this function.
+   * Lets callers supply a non-CSR layout (e.g., a user-defined one) without
+   * routing through the CSR-flavored constructor above.
+   */
+  __host__ __device__ explicit setup(layout_t layout) : layout_(layout) {}
+
+  /**
+   * @brief Range of tiles assigned to this thread (grid-stride).
+   *
+   * Usage:
    * \code{.cpp}
    * for (auto t : config.tiles()) {
-   *  // Process tile t.
+   *   // process tile t
    * }
    * \endcode
-   *
-   * @return grid_stride_range<tile_size_t> Range of tiles to process.
    */
   __device__ step_range_t<tile_size_t> tiles() const {
-    return grid_stride_range(tile_size_t(0), tile_traits_t::size());
+    return grid_stride_range(tile_size_t(0),
+                             static_cast<tile_size_t>(layout_.num_tiles()));
   }
 
   /**
-   * @brief Creates a range of atoms to process within a for loop.
+   * @brief Range of atoms inside the given tile.
    *
-   * @param tid Tile ID for which to create the atom range for.
-   * @return Range of atoms to process.
+   * @param tile Tile id whose atoms to iterate.
+   * @return Range over [tile_begin(tile), tile_end(tile)).
    */
   __device__ auto atoms(const tile_size_t& tile) {
-    return loops::range(tile_traits_t::begin()[tile],
-                        tile_traits_t::begin()[tile + 1]);
+    return loops::range(layout_.tile_begin(tile), layout_.tile_end(tile));
   }
 
+  /**
+   * @brief Range of atoms inside the given tile, with a custom start.
+   *
+   * Used by SpMM-style kernels that resume iteration mid-tile.
+   *
+   * @param tile           Tile id whose atoms to iterate.
+   * @param count_entries  Functor returning the resume offset for `tile`.
+   */
   template <typename iterator_t>
   __device__ auto atoms(const tile_size_t& tile, iterator_t count_entries) {
-    return loops::range(count_entries(tile), tile_traits_t::begin()[tile + 1]);
+    return loops::range(count_entries(tile), layout_.tile_end(tile));
   }
+
+  /// Direct read access to the underlying layout (advanced use).
+  __host__ __device__ const layout_t& layout() const { return layout_; }
+
+ private:
+  layout_t layout_;
 };
 
 }  // namespace schedule
