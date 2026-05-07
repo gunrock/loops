@@ -68,12 +68,12 @@ template <typename index_t,
 struct dia_t {
   std::size_t rows;
   std::size_t cols;
-  std::size_t nnzs;            /// Original (non-padded) nonzero count.
-  std::size_t stride;          /// Length of each stored diagonal (rows).
-  std::size_t num_diagonals;   /// Distinct (r - c) values stored.
+  std::size_t nnzs;           /// Original (non-padded) nonzero count.
+  std::size_t stride;         /// Length of each stored diagonal (rows).
+  std::size_t num_diagonals;  /// Distinct (r - c) values stored.
 
   vector_t<index_t, space> diag_offsets;  /// length num_diagonals.
-  vector_t<value_t, space> values;        /// num_diagonals * stride, column-major.
+  vector_t<value_t, space> values;  /// num_diagonals * stride, column-major.
 
   dia_t()
       : rows(0),
@@ -133,11 +133,9 @@ struct dia_t {
     std::sort(diag_idx.begin(), diag_idx.end());
 
     auto find_diag = [&](index_t off) -> std::size_t {
-      auto it = std::lower_bound(diag_idx.begin(), diag_idx.end(),
-                                  std::make_pair(off, std::size_t{0}),
-                                  [](const auto& a, const auto& b) {
-                                    return a.first < b.first;
-                                  });
+      auto it = std::lower_bound(
+          diag_idx.begin(), diag_idx.end(), std::make_pair(off, std::size_t{0}),
+          [](const auto& a, const auto& b) { return a.first < b.first; });
       return it->second;
     };
 
@@ -146,8 +144,7 @@ struct dia_t {
       const csr_offset_t a_hi = h.offsets[r + 1];
       for (csr_offset_t a = a_lo; a < a_hi; ++a) {
         const index_t c = h.indices[a];
-        const index_t off = static_cast<index_t>(c) -
-                            static_cast<index_t>(r);
+        const index_t off = static_cast<index_t>(c) - static_cast<index_t>(r);
         const std::size_t d = find_diag(off);
         h_values[d * stride + r] = h.values[a];
       }
@@ -156,7 +153,7 @@ struct dia_t {
     diag_offsets = vector_t<index_t, memory_space_t::host>(
         h_diag_offsets.begin(), h_diag_offsets.end());
     values = vector_t<value_t, memory_space_t::host>(h_values.begin(),
-                                                      h_values.end());
+                                                     h_values.end());
   }
 };  // struct dia_t
 

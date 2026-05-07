@@ -78,11 +78,11 @@ util::timer_t coo_thread_mapped(coo_t<index_t, type_t>& coo,
 
   util::timer_t timer;
   timer.start();
-  launch::non_cooperative(
-      stream, __coo_thread_mapped<setup_t, index_t, type_t>, grid_size,
-      block_size, config, coo.row_indices.data().get(),
-      coo.col_indices.data().get(), coo.values.data().get(), x.data().get(),
-      y.data().get());
+  launch::non_cooperative(stream, __coo_thread_mapped<setup_t, index_t, type_t>,
+                          grid_size, block_size, config,
+                          coo.row_indices.data().get(),
+                          coo.col_indices.data().get(), coo.values.data().get(),
+                          x.data().get(), y.data().get());
   cudaStreamSynchronize(stream);
   timer.stop();
   return timer;

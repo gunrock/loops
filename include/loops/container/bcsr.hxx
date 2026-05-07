@@ -70,7 +70,7 @@ struct bcsr_t {
   std::size_t num_block_cols;  /// ceil(cols / C)
   std::size_t num_blocks;      /// Stored (non-empty) blocks.
 
-  vector_t<offset_t, space> block_offsets;  /// length num_block_rows + 1.
+  vector_t<offset_t, space> block_offsets;     /// length num_block_rows + 1.
   vector_t<index_t, space> block_col_indices;  /// length num_blocks.
   vector_t<value_t, space> values;             /// length num_blocks * R * C.
 
@@ -136,8 +136,7 @@ struct bcsr_t {
           const index_t col = h.indices[a];
           const std::size_t bc = static_cast<std::size_t>(col) / C;
           if (bcol_to_local[bc] == offset_t{-1}) {
-            bcol_to_local[bc] =
-                static_cast<offset_t>(opened_bcols.size());
+            bcol_to_local[bc] = static_cast<offset_t>(opened_bcols.size());
             opened_bcols.push_back(static_cast<index_t>(bc));
           }
         }
@@ -188,7 +187,7 @@ struct bcsr_t {
     block_col_indices = vector_t<index_t, memory_space_t::host>(
         h_block_col_indices.begin(), h_block_col_indices.end());
     values = vector_t<value_t, memory_space_t::host>(h_values.begin(),
-                                                      h_values.end());
+                                                     h_values.end());
   }
 };  // struct bcsr_t
 

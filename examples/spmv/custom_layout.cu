@@ -76,10 +76,10 @@ struct row_padded_layout {
  public:
   using tile_id_t = tile_id_type;
   using atom_id_t = atom_id_type;
-  using tile_end_iterator_t = thrust::transform_iterator<
-      tile_end_fn,
-      thrust::counting_iterator<tile_id_t>,
-      atom_id_t>;
+  using tile_end_iterator_t =
+      thrust::transform_iterator<tile_end_fn,
+                                 thrust::counting_iterator<tile_id_t>,
+                                 atom_id_t>;
 
   tile_id_t n_rows_;
   atom_id_t pitch_;  /// atoms per tile (uniform); = max-non-zeros-per-row.
@@ -171,7 +171,8 @@ struct row_padded_storage {
  * The same kernel body would compile against CSR, ELL, or any other
  * layout satisfying the contract.
  *
- * @tparam setup_t Schedule setup (e.g., @c schedule::setup<thread_mapped,...> ).
+ * @tparam setup_t Schedule setup (e.g., @c schedule::setup<thread_mapped,...>
+ * ).
  * @tparam index_t Column-index type.
  * @tparam type_t  Value type.
  */
@@ -213,10 +214,9 @@ int main(int argc, char** argv) {
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using my_layout_t = row_padded_layout<tile_id_t, atom_id_t>;
-  using setup_t = schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1,
-                                  tile_id_t, atom_id_t,
-                                  std::size_t, std::size_t,
-                                  my_layout_t>;
+  using setup_t =
+      schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1, tile_id_t,
+                      atom_id_t, std::size_t, std::size_t, my_layout_t>;
 
   my_layout_t lay(static_cast<tile_id_t>(storage.num_rows),
                   static_cast<atom_id_t>(storage.pitch));
@@ -226,11 +226,11 @@ int main(int argc, char** argv) {
   timer.start();
   constexpr std::size_t block_size = 128;
   std::size_t grid_size = (storage.num_rows + block_size - 1) / block_size;
-  launch::non_cooperative(
-      0, __custom_layout_spmv<setup_t, index_t, type_t>, grid_size, block_size,
-      config, thrust::raw_pointer_cast(storage.indices.data()),
-      thrust::raw_pointer_cast(storage.values.data()), x.data().get(),
-      y.data().get());
+  launch::non_cooperative(0, __custom_layout_spmv<setup_t, index_t, type_t>,
+                          grid_size, block_size, config,
+                          thrust::raw_pointer_cast(storage.indices.data()),
+                          thrust::raw_pointer_cast(storage.values.data()),
+                          x.data().get(), y.data().get());
   cudaStreamSynchronize(0);
   timer.stop();
 

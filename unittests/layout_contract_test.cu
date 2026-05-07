@@ -96,7 +96,8 @@ TEST_CASE("layout::csr satisfies the layout contract", "[layout][csr]") {
   // to exercise tile_of's binary search around degenerate cases. We keep the
   // offsets array on the host because the layout view holds a raw pointer
   // that we later dereference from host code in the assertions.
-  std::vector<int> offsets_storage{0, 2, 2, 5, 7};  // 4 rows, nnz=7, row 1 empty
+  std::vector<int> offsets_storage{0, 2, 2, 5,
+                                   7};  // 4 rows, nnz=7, row 1 empty
   thrust::host_vector<int> h_offsets(offsets_storage.begin(),
                                      offsets_storage.end());
 

@@ -88,10 +88,10 @@ struct flat_uniform_occupancy {
   using base_layout_t = base_layout_type;
   using tile_id_t = typename base_layout_t::tile_id_t;
   using atom_id_t = typename base_layout_t::atom_id_t;
-  using tile_end_iterator_t = thrust::transform_iterator<
-      tile_end_fn,
-      thrust::counting_iterator<tile_id_t>,
-      atom_id_t>;
+  using tile_end_iterator_t =
+      thrust::transform_iterator<tile_end_fn,
+                                 thrust::counting_iterator<tile_id_t>,
+                                 atom_id_t>;
 
   static constexpr atom_id_t kAtomsPerTile = static_cast<atom_id_t>(K);
 

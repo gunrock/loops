@@ -78,8 +78,7 @@ util::timer_t csc_thread_mapped(csc_t<index_t, offset_t, type_t>& csc,
 
   util::timer_t timer;
   timer.start();
-  launch::non_cooperative(stream,
-                          __csc_thread_mapped<setup_t, index_t, type_t>,
+  launch::non_cooperative(stream, __csc_thread_mapped<setup_t, index_t, type_t>,
                           grid_size, block_size, config,
                           csc.indices.data().get(), csc.values.data().get(),
                           x.data().get(), y.data().get());

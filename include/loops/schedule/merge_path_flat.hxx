@@ -65,9 +65,8 @@ __global__ void generate_search_coordinates(layout_t layout,
     coord_t tile_coordinate;
 
     // Search the merge path (block-wide.)
-    tile_coordinate = search::_binary_search(diagonal, layout.tile_end_iter(),
-                                             atoms_indices, num_tiles,
-                                             num_atoms);
+    tile_coordinate = search::_binary_search(
+        diagonal, layout.tile_end_iter(), atoms_indices, num_tiles, num_atoms);
 
     // Output starting offset
     d_tile_coordinates[tile_idx] = tile_coordinate;

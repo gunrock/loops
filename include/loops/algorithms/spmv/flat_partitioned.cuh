@@ -83,25 +83,23 @@ util::timer_t flat_partitioned(csr_t<index_t, offset_t, type_t>& csr,
       schedule::setup<schedule::algorithms_t::thread_mapped, 1, 1, tile_id_t,
                       atom_id_t, std::size_t, std::size_t, lay_t>;
 
-  base_layout_t base(csr.offsets.data().get(),
-                     static_cast<tile_id_t>(csr.rows),
+  base_layout_t base(csr.offsets.data().get(), static_cast<tile_id_t>(csr.rows),
                      static_cast<atom_id_t>(csr.nnzs));
   lay_t partitioned(base);
   setup_t config(partitioned);
 
   constexpr std::size_t block_size = 128;
-  std::size_t grid_size =
-      math::ceil_div(static_cast<std::size_t>(partitioned.num_tiles()),
-                     block_size);
+  std::size_t grid_size = math::ceil_div(
+      static_cast<std::size_t>(partitioned.num_tiles()), block_size);
 
   // y is assumed zero-initialized (vector_t<type_t>(n) default-constructs
   // each element to 0). The kernel atomic-adds into y[row].
   util::timer_t timer;
   timer.start();
-  launch::non_cooperative(
-      stream, __flat_partitioned<setup_t, index_t, type_t>, grid_size,
-      block_size, config, csr.indices.data().get(), csr.values.data().get(),
-      x.data().get(), y.data().get());
+  launch::non_cooperative(stream, __flat_partitioned<setup_t, index_t, type_t>,
+                          grid_size, block_size, config,
+                          csr.indices.data().get(), csr.values.data().get(),
+                          x.data().get(), y.data().get());
   cudaStreamSynchronize(stream);
   timer.stop();
   return timer;
