@@ -90,7 +90,7 @@ struct coo_t {
         cols(csr.cols),
         nnzs(csr.nnzs),
         row_indices(csr.nnzs),
-        col_indices(csr.col_indices),
+        col_indices(csr.indices),
         values(csr.values) {
     /// TODO: Do not need this copy for all cases.
     vector_t<offset_t, space> _row_offsets = csr.offsets;
