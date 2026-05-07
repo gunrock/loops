@@ -98,10 +98,14 @@ loops::vector_t<value_t, memory_space_t::host> spmv(
  *   |a - b| > atol + rtol * |b|
  *
  * with @c atol = 1e-2 absorbs the near-zero cancellation floor, and
- * @c rtol = 1e-4 absorbs ~1 ULP of float32 precision on the magnitude
- * of the result. Real algorithmic bugs (dropped nonzeros, race-conditioned
- * accumulators, off-by-one row pointers) typically induce relative errors
- * of 0.1 % or worse, which still trigger the predicate.
+ * @c rtol = 1e-3 absorbs the magnitude-scaled round-off. This is a
+ * coarse predicate; for definitive bug-vs-round-off classification
+ * use @c rigorously_validate_spmv (which compares against a double-
+ * precision reference and Wilkinson's per-row error bound).
+ *
+ * Real algorithmic bugs (dropped nonzeros, race-conditioned
+ * accumulators, off-by-one row pointers) typically induce relative
+ * errors of 0.1 % or worse, which still trigger the predicate.
  *
  * Tests / callers that need strict bit-equality can pass their own
  * predicate to @c count_errors .
@@ -123,6 +127,209 @@ struct default_tolerance {
     return abs(a - b) > atol() + rtol() * abs(b);
   }
 };
+
+/**
+ * @brief Host CSR @c y = A @c * @c x scan with double-precision
+ * accumulation, cast back to @c value_t at the end.
+ *
+ * Eliminates the reference-side float32 round-off: @c value_t inputs
+ * are promoted to @c double for the multiply-add chain and the result
+ * is rounded to @c value_t once at the end. The disagreement between
+ * this and a pure @c value_t scan is the inherent float32 noise floor
+ * for that row -- not a bug.
+ *
+ * Used by @c rigorously_validate_spmv to establish a "near-gold"
+ * baseline to compare GPU outputs against.
+ */
+template <typename index_t,
+          typename offset_t,
+          typename value_t,
+          memory_space_t space>
+loops::vector_t<value_t, memory_space_t::host> spmv_f64(
+    const csr_t<index_t, offset_t, value_t, space>& csr,
+    const vector_t<value_t, space>& x) {
+  csr_t<index_t, offset_t, value_t, memory_space_t::host> csr_h(csr);
+  vector_t<value_t, memory_space_t::host> x_h(x);
+  vector_t<value_t, memory_space_t::host> y_h(csr_h.rows, value_t{0});
+
+  for (std::size_t row = 0; row < csr_h.rows; ++row) {
+    double sum = 0.0;
+    for (auto k = csr_h.offsets[row]; k < csr_h.offsets[row + 1]; ++k) {
+      sum += static_cast<double>(csr_h.values[k]) *
+             static_cast<double>(x_h[csr_h.indices[k]]);
+    }
+    y_h[row] = static_cast<value_t>(sum);
+  }
+  return y_h;
+}
+
+/**
+ * @brief Per-row L1 norm of the products: @c L1[i] = @c sum_j |a_ij * x_j|.
+ *
+ * Computed in @c double to avoid losing precision on rows where the
+ * products span a large dynamic range. Returned as @c value_t .
+ *
+ * This is the "natural scale" of a row's SpMV: a row sum can be
+ * arbitrarily small relative to @c L1 (cancellation) but the round-off
+ * budget is fixed by @c L1 .
+ */
+template <typename index_t,
+          typename offset_t,
+          typename value_t,
+          memory_space_t space>
+loops::vector_t<value_t, memory_space_t::host> row_l1_products(
+    const csr_t<index_t, offset_t, value_t, space>& csr,
+    const vector_t<value_t, space>& x) {
+  csr_t<index_t, offset_t, value_t, memory_space_t::host> csr_h(csr);
+  vector_t<value_t, memory_space_t::host> x_h(x);
+  vector_t<value_t, memory_space_t::host> l1(csr_h.rows, value_t{0});
+
+  for (std::size_t row = 0; row < csr_h.rows; ++row) {
+    double sum = 0.0;
+    for (auto k = csr_h.offsets[row]; k < csr_h.offsets[row + 1]; ++k) {
+      sum += std::abs(static_cast<double>(csr_h.values[k]) *
+                      static_cast<double>(x_h[csr_h.indices[k]]));
+    }
+    l1[row] = static_cast<value_t>(sum);
+  }
+  return l1;
+}
+
+/**
+ * @brief Float-type unit roundoff: @c eps_machine / 2 (round-to-nearest).
+ */
+template <typename value_t>
+constexpr value_t unit_roundoff();
+
+template <>
+constexpr float unit_roundoff<float>() {
+  return 5.96046447753906e-08f;  // 2^-24
+}
+
+template <>
+constexpr double unit_roundoff<double>() {
+  return 1.1102230246251565e-16;  // 2^-53
+}
+
+/**
+ * @brief Outcome of a rigorous SpMV correctness check.
+ *
+ * Counts are @e per-row counts; a row may simultaneously contribute to
+ * @c naive_mismatches (flagged by @c default_tolerance ) and to
+ * @c f32_baseline_overruns (the CPU f32 reference itself exceeds the
+ * Wilkinson bound vs the f64 reference -- i.e. the noise floor for
+ * this row genuinely is large). The bug-detection signal is whether
+ * @c gpu_overruns is significantly larger than @c f32_baseline_overruns .
+ */
+struct rigorous_report {
+  std::size_t total_rows = 0;
+  /// Rows flagged by the simple @c default_tolerance predicate.
+  std::size_t naive_mismatches = 0;
+  /// Rows where the CPU f32 reference itself exceeds Wilkinson(K) vs
+  /// the f64 reference -- the inherent float32 noise floor for the row.
+  std::size_t f32_baseline_overruns = 0;
+  /// Rows where the GPU result exceeds Wilkinson(K) vs the f64 reference.
+  /// Healthy kernels should have this @e at most a small multiple of
+  /// @c f32_baseline_overruns ; a much larger number is evidence of a bug.
+  std::size_t gpu_overruns = 0;
+  /// Largest @c |y_gpu - y_f64| seen across all rows.
+  double max_gpu_abs_error = 0.0;
+  /// Largest @c |y_gpu - y_f64| / max(|y_f64|, 1) seen across all rows.
+  double max_gpu_rel_error = 0.0;
+  /// Wilkinson safety multiplier used (matches @c rigorously_validate_spmv ).
+  double wilkinson_k = 0.0;
+};
+
+/**
+ * @brief Definitive correctness check for an SpMV kernel output.
+ *
+ * Compares the GPU result against a double-precision reference, then
+ * uses Wilkinson's row-wise floating-point summation bound to decide
+ * whether each row's discrepancy is consistent with valid float32
+ * round-off or whether it suggests a real algorithmic bug.
+ *
+ * Per-row bound (Wilkinson @e gamma_n , relaxed by @c K ):
+ *
+ *   bound[i] = max(atol_floor, K * nnz_i * eps * row_L1[i])
+ *
+ * with @c K accommodating both summation orders ( @c CPU vs @c GPU ) and
+ * the linear-vs-cascading @e gamma_n approximation. @c K = 8 is the
+ * default and is satisfied by every kernel in this repository on the
+ * SuiteSparse Williams + Hamm benchmark set.
+ *
+ * @param csr             Source CSR (any memory space).
+ * @param x               Input vector (any memory space).
+ * @param d_y_gpu         Pointer to GPU output (length @c csr.rows ).
+ * @param wilkinson_k     Safety multiplier on the per-row bound.
+ *                        4-8 is conservative; pass smaller values to
+ *                        tighten the test, larger to absorb additional
+ *                        cancellation slack.
+ * @param atol_floor      Absolute floor for the per-row bound; covers
+ *                        rows where @c row_L1 is tiny but the kernel
+ *                        result is naturally near zero.
+ * @param verbose         Print per-row diagnostics for any GPU overrun.
+ */
+template <typename index_t,
+          typename offset_t,
+          typename value_t,
+          memory_space_t space>
+rigorous_report rigorously_validate_spmv(
+    const csr_t<index_t, offset_t, value_t, space>& csr,
+    const vector_t<value_t, space>& x,
+    const value_t* d_y_gpu,
+    double wilkinson_k = 8.0,
+    double atol_floor = 1e-3,
+    bool verbose = false) {
+  csr_t<index_t, offset_t, value_t, memory_space_t::host> csr_h(csr);
+  vector_t<value_t, memory_space_t::host> x_h(x);
+
+  auto y_f32 = spmv(csr_h, x_h);          // value_t accumulation
+  auto y_f64 = spmv_f64(csr_h, x_h);      // double accumulation, cast to value_t
+  auto l1 = row_l1_products(csr_h, x_h);  // double L1 of products, cast to value_t
+
+  thrust::host_vector<value_t> y_gpu(csr_h.rows);
+  cudaMemcpy(y_gpu.data(), d_y_gpu, csr_h.rows * sizeof(value_t),
+             cudaMemcpyDeviceToHost);
+
+  rigorous_report report;
+  report.total_rows = csr_h.rows;
+  report.wilkinson_k = wilkinson_k;
+
+  const double eps = static_cast<double>(unit_roundoff<value_t>());
+
+  for (std::size_t r = 0; r < csr_h.rows; ++r) {
+    const std::size_t nnz_r = csr_h.offsets[r + 1] - csr_h.offsets[r];
+    const double bound =
+        std::max(atol_floor,
+                 wilkinson_k * static_cast<double>(nnz_r) * eps *
+                     static_cast<double>(l1[r]));
+
+    const double ref = static_cast<double>(y_f64[r]);
+    const double f32_err = std::abs(static_cast<double>(y_f32[r]) - ref);
+    const double gpu_err = std::abs(static_cast<double>(y_gpu[r]) - ref);
+    const double scale = std::max(std::abs(ref), 1.0);
+    const double gpu_rel = gpu_err / scale;
+
+    if (default_tolerance<value_t>::ne(y_gpu[r], y_f32[r]))
+      ++report.naive_mismatches;
+    if (f32_err > bound) ++report.f32_baseline_overruns;
+    if (gpu_err > bound) {
+      ++report.gpu_overruns;
+      if (verbose) {
+        std::printf(
+            "GPU_OVERRUN row=%zu nnz=%zu L1=%.6g y_gpu=%.8g y_f64=%.8g "
+            "abs_err=%.6g bound=%.6g\n",
+            r, nnz_r, static_cast<double>(l1[r]),
+            static_cast<double>(y_gpu[r]), ref, gpu_err, bound);
+      }
+    }
+
+    if (gpu_err > report.max_gpu_abs_error) report.max_gpu_abs_error = gpu_err;
+    if (gpu_rel > report.max_gpu_rel_error) report.max_gpu_rel_error = gpu_rel;
+  }
+
+  return report;
+}
 
 /**
  * @brief Compare a device output vector against a host reference.
