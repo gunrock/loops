@@ -8,6 +8,10 @@ set(LOOPS_SPMV_SOURCES
   ell_merge_path.cu
   custom_layout.cu
   flat_partitioned.cu
+  coo_thread_mapped.cu
+  csc_thread_mapped.cu
+  bcsr_thread_mapped.cu
+  dia_thread_mapped.cu
 )
 
 foreach(SOURCE IN LISTS LOOPS_SPMV_SOURCES)

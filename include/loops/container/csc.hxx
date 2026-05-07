@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <loops/container/formats.hxx>
+#include <loops/container/detail/convert.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/memory.hxx>
 
@@ -55,7 +57,7 @@ struct csc_t {
       : rows(r),
         cols(c),
         nnzs(nnz),
-        offsets(r + 1),
+        offsets(c + 1),
         indices(nnz),
         values(nnz) {}
 
@@ -88,6 +90,20 @@ struct csc_t {
     values = std::move(__.values);
     detail::indices_to_offsets(__.col_indices, offsets);
   }
+
+  /**
+   * @brief Construct a new csc object from compressed sparse row (CSR) format.
+   *
+   * Internally goes through COO (csr -> coo -> csc) so the heavy lifting is
+   * delegated to the existing converters. This is the structural transpose:
+   * the resulting csc_t has the same nnzs as the input csr_t, but its
+   * @c offsets array indexes columns rather than rows.
+   *
+   * @param csr csr_t<index_t, offset_t, value_t, rhs_space>
+   */
+  template <auto rhs_space>
+  csc_t(const csr_t<index_t, offset_t, value_t, rhs_space>& csr)
+      : csc_t(coo_t<index_t, value_t, space>(csr)) {}
 
 };  // struct csc_t
 

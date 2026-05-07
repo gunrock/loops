@@ -148,6 +148,276 @@ struct csr {
 };
 
 /**
+ * @brief DIA-shaped tile-atom layout view (tile is a row, atom is a diagonal cell).
+ *
+ * Diagonal (DIA) format stores @c num_diagonals dense diagonals; from a
+ * scheduling perspective this is identical to an ELL with @c pitch ==
+ * @c num_diagonals : every row has exactly @c num_diagonals atoms
+ * (some of which may be padding zeros if @c (r, r + diag_offsets[d])
+ * is out of the matrix). We could literally @c using @c dia @c =
+ * @c ell , but a distinct type makes the kernel-side semantics
+ * (atom-id maps to diagonal index, not ELL bucket) explicit.
+ *
+ * @tparam tile_id_type Tile-id type (row id).
+ * @tparam atom_id_type Atom-id type (flat (row, diagonal-index) pair).
+ */
+template <typename tile_id_type, typename atom_id_type>
+struct dia {
+  using tile_id_t = tile_id_type;
+  using atom_id_t = atom_id_type;
+
+private:
+  struct tile_end_fn {
+    atom_id_t pitch;  // == num_diagonals
+    __host__ __device__ atom_id_t operator()(tile_id_t i) const {
+      return static_cast<atom_id_t>(i + 1) * pitch;
+    }
+  };
+
+public:
+  using tile_end_iterator_t =
+      thrust::transform_iterator<tile_end_fn,
+                                 thrust::counting_iterator<tile_id_t>,
+                                 atom_id_t>;
+
+  tile_id_t n_tiles_;  /// == num_rows
+  atom_id_t pitch_;    /// == num_diagonals
+
+  __host__ __device__ dia() : n_tiles_(0), pitch_(0) {}
+
+  __host__ __device__ dia(tile_id_t num_rows, atom_id_t num_diags)
+      : n_tiles_(num_rows), pitch_(num_diags) {}
+
+  __host__ __device__ tile_id_t num_tiles() const { return n_tiles_; }
+  __host__ __device__ atom_id_t num_atoms() const {
+    return static_cast<atom_id_t>(n_tiles_) * pitch_;
+  }
+
+  __host__ __device__ atom_id_t tile_begin(tile_id_t t) const {
+    return static_cast<atom_id_t>(t) * pitch_;
+  }
+  __host__ __device__ atom_id_t tile_end(tile_id_t t) const {
+    return static_cast<atom_id_t>(t + 1) * pitch_;
+  }
+  __host__ __device__ atom_id_t tile_size(tile_id_t /*t*/) const {
+    return pitch_;
+  }
+
+  __host__ __device__ tile_end_iterator_t tile_end_iter() const {
+    return thrust::make_transform_iterator(
+        thrust::counting_iterator<tile_id_t>(0), tile_end_fn{pitch_});
+  }
+
+  /// O(1): row that owns flat (row, diag-index) atom @c a.
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    return static_cast<tile_id_t>(a / pitch_);
+  }
+};
+
+/**
+ * @brief BCSR-shaped tile-atom layout view (tile is a block-row).
+ *
+ * Block Compressed Sparse Row (BCSR) compresses the matrix at the level
+ * of @c R-by-C dense blocks. The layout's offsets array indexes
+ * *block-rows*, and an atom is a *block id* (not a scalar nonzero):
+ *
+ *   - num_tiles == num_block_rows == ceil(rows / R)
+ *   - num_atoms == num_blocks (total stored R-by-C blocks)
+ *   - tile_size(br) == number of stored blocks in block-row br
+ *
+ * The R/C block dimensions live in the @c bcsr_t container and the
+ * kernel template; the layout itself is dimension-agnostic, just like
+ * @c layout::csr , so the same schedules work unchanged. The kernel,
+ * given an atom (block id), reaches into @c values[atom * R * C + ...]
+ * and @c block_col_indices[atom] to do its R-by-C dense update.
+ *
+ * @tparam tile_id_type Index type for tiles (block-row id).
+ * @tparam atom_id_type Index type for atoms (block id).
+ */
+template <typename tile_id_type, typename atom_id_type>
+struct bcsr {
+  using tile_id_t = tile_id_type;
+  using atom_id_t = atom_id_type;
+  using tile_end_iterator_t = atom_id_t const*;
+
+  atom_id_t const* offsets_;  /// length num_tiles + 1.
+  tile_id_t n_tiles_;
+  atom_id_t n_atoms_;
+
+  __host__ __device__ bcsr() : offsets_(nullptr), n_tiles_(0), n_atoms_(0) {}
+
+  __host__ __device__ bcsr(atom_id_t const* offsets,
+                           tile_id_t num_tiles,
+                           atom_id_t num_atoms)
+      : offsets_(offsets), n_tiles_(num_tiles), n_atoms_(num_atoms) {}
+
+  __host__ __device__ tile_id_t num_tiles() const { return n_tiles_; }
+  __host__ __device__ atom_id_t num_atoms() const { return n_atoms_; }
+
+  __host__ __device__ atom_id_t tile_begin(tile_id_t t) const {
+    return offsets_[t];
+  }
+  __host__ __device__ atom_id_t tile_end(tile_id_t t) const {
+    return offsets_[t + 1];
+  }
+  __host__ __device__ atom_id_t tile_size(tile_id_t t) const {
+    return offsets_[t + 1] - offsets_[t];
+  }
+
+  __host__ __device__ tile_end_iterator_t tile_end_iter() const {
+    return offsets_ + 1;
+  }
+
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    tile_id_t lo = 0;
+    tile_id_t hi = n_tiles_;
+    while (lo < hi) {
+      tile_id_t mid = lo + ((hi - lo) >> 1);
+      if (offsets_[mid + 1] <= a)
+        lo = mid + 1;
+      else
+        hi = mid;
+    }
+    return lo;
+  }
+};
+
+/**
+ * @brief CSC-shaped tile-atom layout view (tile is a *column*).
+ *
+ * Structurally identical to @c layout::csr - the offsets array indexes
+ * tiles, every tile has @c offsets_[t+1] - offsets_[t] atoms, and tiles
+ * are contiguous in atom-id space. The *interpretation* is what differs:
+ *
+ *   - csr: tile = row, atom_id indexes col_indices/values arrays
+ *   - csc: tile = col, atom_id indexes row_indices/values arrays
+ *
+ * The schedule code is oblivious to which interpretation is active; only
+ * the kernel cares (it dereferences the right index array and chooses
+ * whether the per-tile output is row-stationary, requiring no atomics,
+ * or column-stationary, where each atom in a tile writes a different
+ * row of @c y and an @c atomicAdd is needed).
+ *
+ * Carrying a distinct type for CSC (instead of an alias for CSR) makes
+ * SpMV kernels self-documenting: a kernel templated on
+ * @c layout::csc<...> declares "I expect column-major data and will
+ * atomic-add by row". A kernel templated on @c layout::csr<...> declares
+ * "I expect row-major data and will accumulate locally per tile".
+ *
+ * @tparam tile_id_type Index type for tiles (column id).
+ * @tparam atom_id_type Index type for atoms (flat nnz position).
+ */
+template <typename tile_id_type, typename atom_id_type>
+struct csc {
+  using tile_id_t = tile_id_type;
+  using atom_id_t = atom_id_type;
+  using tile_end_iterator_t = atom_id_t const*;
+
+  atom_id_t const* offsets_;  /// length num_tiles + 1, monotonically non-decreasing.
+  tile_id_t n_tiles_;
+  atom_id_t n_atoms_;
+
+  __host__ __device__ csc() : offsets_(nullptr), n_tiles_(0), n_atoms_(0) {}
+
+  __host__ __device__ csc(atom_id_t const* offsets,
+                          tile_id_t num_tiles,
+                          atom_id_t num_atoms)
+      : offsets_(offsets), n_tiles_(num_tiles), n_atoms_(num_atoms) {}
+
+  __host__ __device__ tile_id_t num_tiles() const { return n_tiles_; }
+  __host__ __device__ atom_id_t num_atoms() const { return n_atoms_; }
+
+  __host__ __device__ atom_id_t tile_begin(tile_id_t t) const {
+    return offsets_[t];
+  }
+  __host__ __device__ atom_id_t tile_end(tile_id_t t) const {
+    return offsets_[t + 1];
+  }
+  __host__ __device__ atom_id_t tile_size(tile_id_t t) const {
+    return offsets_[t + 1] - offsets_[t];
+  }
+
+  __host__ __device__ tile_end_iterator_t tile_end_iter() const {
+    return offsets_ + 1;
+  }
+
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    tile_id_t lo = 0;
+    tile_id_t hi = n_tiles_;
+    while (lo < hi) {
+      tile_id_t mid = lo + ((hi - lo) >> 1);
+      if (offsets_[mid + 1] <= a)
+        lo = mid + 1;
+      else
+        hi = mid;
+    }
+    return lo;
+  }
+};
+
+/**
+ * @brief COO-shaped tile-atom layout view (one tile per nonzero).
+ *
+ * Coordinate (COO) format stores each nonzero as an independent
+ * @c (row, col, value) triple with no implicit grouping. The format-native
+ * mapping into the layout contract is therefore:
+ *
+ *   - @c num_tiles == @c num_atoms == @c nnz
+ *   - @c tile_size(t) == 1 for every tile
+ *   - @c tile_begin(t) == t , @c tile_end(t) == t+1
+ *
+ * This is a *degenerate* but valid layout: it's perfect for kernels that
+ * want one thread per nonzero with atomic-add output (the canonical COO
+ * SpMV pattern), and it lets us drive any of the existing schedules over
+ * COO data without first converting to CSR.
+ *
+ * If you have a *sorted* COO and want tile=row instead of tile=NZ, build
+ * an offsets array and use @c layout::csr - that's structurally what CSR
+ * is for. If you want every K nonzeros to form a tile (across rows),
+ * wrap this layout in @c layout::flat_uniform_occupancy<K, layout::coo>.
+ *
+ * @tparam tile_id_type Tile-id type (one per nonzero, so equals nnz).
+ * @tparam atom_id_type Atom-id type (one per nonzero, so equals nnz).
+ */
+template <typename tile_id_type, typename atom_id_type>
+struct coo {
+  using tile_id_t = tile_id_type;
+  using atom_id_t = atom_id_type;
+  using tile_end_iterator_t = thrust::counting_iterator<atom_id_t>;
+
+  atom_id_t n_nzs_;  /// total non-zeros == num_tiles == num_atoms.
+
+  __host__ __device__ coo() : n_nzs_(0) {}
+
+  __host__ __device__ explicit coo(atom_id_t nnz) : n_nzs_(nnz) {}
+
+  __host__ __device__ tile_id_t num_tiles() const {
+    return static_cast<tile_id_t>(n_nzs_);
+  }
+  __host__ __device__ atom_id_t num_atoms() const { return n_nzs_; }
+
+  __host__ __device__ atom_id_t tile_begin(tile_id_t t) const {
+    return static_cast<atom_id_t>(t);
+  }
+  __host__ __device__ atom_id_t tile_end(tile_id_t t) const {
+    return static_cast<atom_id_t>(t) + 1;
+  }
+  __host__ __device__ atom_id_t tile_size(tile_id_t /*t*/) const {
+    return atom_id_t{1};
+  }
+
+  /// @c counting_iterator(1) gives @c i[k] == @c k+1 == @c tile_end(k).
+  __host__ __device__ tile_end_iterator_t tile_end_iter() const {
+    return thrust::counting_iterator<atom_id_t>(1);
+  }
+
+  /// O(1): @c tile_of(a) is just @c a, since every nonzero is its own tile.
+  __host__ __device__ tile_id_t tile_of(atom_id_t a) const {
+    return static_cast<tile_id_t>(a);
+  }
+};
+
+/**
  * @brief ELL-shaped tile-atom layout view (uniform tile size).
  *
  * Tiles correspond to rows; every tile holds exactly `pitch` atoms (some of
