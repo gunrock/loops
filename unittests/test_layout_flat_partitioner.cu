@@ -59,9 +59,8 @@ TEST_CASE("layout::flat_uniform_occupancy satisfies the layout contract",
   }
 }
 
-TEST_CASE(
-    "layout::flat_uniform_occupancy with K dividing num_atoms exactly",
-    "[layout][partitioner][flat][edge]") {
+TEST_CASE("layout::flat_uniform_occupancy with K dividing num_atoms exactly",
+          "[layout][partitioner][flat][edge]") {
   // 4 rows, 8 nnz, K = 4 -> exactly 2 tiles, none short.
   std::vector<int> offsets{0, 2, 4, 6, 8};
   thrust::host_vector<int> h_offsets(offsets.begin(), offsets.end());
@@ -104,7 +103,8 @@ TEST_CASE("layout::flat_uniform_occupancy can wrap layout::ell",
   check_layout_invariants(lay, 12);
   check_tile_of_round_trip(lay);
   CHECK(lay.num_tiles() == 4);
-  for (int t = 0; t < 4; ++t) CHECK(lay.tile_size(t) == 3);
+  for (int t = 0; t < 4; ++t)
+    CHECK(lay.tile_size(t) == 3);
   // Recovering the original ELL row of an atom still works through base().
   CHECK(lay.base().tile_of(0) == 0);
   CHECK(lay.base().tile_of(5) == 1);

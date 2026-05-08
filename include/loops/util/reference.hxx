@@ -286,9 +286,10 @@ rigorous_report rigorously_validate_spmv(
   csr_t<index_t, offset_t, value_t, memory_space_t::host> csr_h(csr);
   vector_t<value_t, memory_space_t::host> x_h(x);
 
-  auto y_f32 = spmv(csr_h, x_h);          // value_t accumulation
-  auto y_f64 = spmv_f64(csr_h, x_h);      // double accumulation, cast to value_t
-  auto l1 = row_l1_products(csr_h, x_h);  // double L1 of products, cast to value_t
+  auto y_f32 = spmv(csr_h, x_h);      // value_t accumulation
+  auto y_f64 = spmv_f64(csr_h, x_h);  // double accumulation, cast to value_t
+  auto l1 =
+      row_l1_products(csr_h, x_h);  // double L1 of products, cast to value_t
 
   thrust::host_vector<value_t> y_gpu(csr_h.rows);
   cudaMemcpy(y_gpu.data(), d_y_gpu, csr_h.rows * sizeof(value_t),
@@ -303,9 +304,8 @@ rigorous_report rigorously_validate_spmv(
   for (std::size_t r = 0; r < csr_h.rows; ++r) {
     const std::size_t nnz_r = csr_h.offsets[r + 1] - csr_h.offsets[r];
     const double bound =
-        std::max(atol_floor,
-                 wilkinson_k * static_cast<double>(nnz_r) * eps *
-                     static_cast<double>(l1[r]));
+        std::max(atol_floor, wilkinson_k * static_cast<double>(nnz_r) * eps *
+                                 static_cast<double>(l1[r]));
 
     const double ref = static_cast<double>(y_f64[r]);
     const double f32_err = std::abs(static_cast<double>(y_f32[r]) - ref);
@@ -315,20 +315,23 @@ rigorous_report rigorously_validate_spmv(
 
     if (default_tolerance<value_t>::ne(y_gpu[r], y_f32[r]))
       ++report.naive_mismatches;
-    if (f32_err > bound) ++report.f32_baseline_overruns;
+    if (f32_err > bound)
+      ++report.f32_baseline_overruns;
     if (gpu_err > bound) {
       ++report.gpu_overruns;
       if (verbose) {
         std::printf(
             "GPU_OVERRUN row=%zu nnz=%zu L1=%.6g y_gpu=%.8g y_f64=%.8g "
             "abs_err=%.6g bound=%.6g\n",
-            r, nnz_r, static_cast<double>(l1[r]),
-            static_cast<double>(y_gpu[r]), ref, gpu_err, bound);
+            r, nnz_r, static_cast<double>(l1[r]), static_cast<double>(y_gpu[r]),
+            ref, gpu_err, bound);
       }
     }
 
-    if (gpu_err > report.max_gpu_abs_error) report.max_gpu_abs_error = gpu_err;
-    if (gpu_rel > report.max_gpu_rel_error) report.max_gpu_rel_error = gpu_rel;
+    if (gpu_err > report.max_gpu_abs_error)
+      report.max_gpu_abs_error = gpu_err;
+    if (gpu_rel > report.max_gpu_rel_error)
+      report.max_gpu_rel_error = gpu_rel;
   }
 
   return report;
@@ -366,8 +369,7 @@ std::size_t count_errors(const value_t* d_y,
     if (ne(y_h[i], h_ref[i])) {
       if (verbose) {
         std::printf("Error[%zu]: %.8g != %.8g\n", i,
-                    static_cast<double>(y_h[i]),
-                    static_cast<double>(h_ref[i]));
+                    static_cast<double>(y_h[i]), static_cast<double>(h_ref[i]));
       }
       ++errors;
     }
@@ -380,11 +382,10 @@ std::size_t count_errors(const value_t* d_y,
                          const value_t* h_ref,
                          std::size_t n,
                          bool verbose = false) {
-  return count_errors(d_y, h_ref, n,
-                      [](value_t a, value_t b) {
-                        return default_tolerance<value_t>::ne(a, b);
-                      },
-                      verbose);
+  return count_errors(
+      d_y, h_ref, n,
+      [](value_t a, value_t b) { return default_tolerance<value_t>::ne(a, b); },
+      verbose);
 }
 
 }  // namespace reference

@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
 
   vector_t<type_t> x(bcsr.num_block_cols * kC);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.begin() + csr.cols, 1,
-                                         10, /*seed=*/42u);
+  generate::random::uniform_distribution(x.begin(), x.begin() + csr.cols, 1, 10,
+                                         /*seed=*/42u);
 
   auto timer = algorithms::spmv::bcsr_thread_mapped<kR, kC>(bcsr, x, y);
 

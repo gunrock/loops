@@ -146,8 +146,7 @@ TEST_CASE("csr -> ell dense-equivalence", "[round_trip][csr][ell]") {
   check_dense_equal(dense_from_csr(csr), dense_from_ell(ell));
 }
 
-TEST_CASE("csr -> bcsr (2x2) dense-equivalence",
-          "[round_trip][csr][bcsr]") {
+TEST_CASE("csr -> bcsr (2x2) dense-equivalence", "[round_trip][csr][bcsr]") {
   auto csr = make_block_diag_csr(/*num_blocks=*/4, /*block_size=*/2);
   bcsr_t<2, 2, int, int, float, memory::memory_space_t::host> b(csr);
   check_dense_equal(dense_from_csr(csr), dense_from_bcsr<2, 2>(b));
@@ -166,9 +165,8 @@ TEST_CASE("csr -> dia dense-equivalence", "[round_trip][csr][dia]") {
   check_dense_equal(dense_from_csr(csr), dense_from_dia(d));
 }
 
-TEST_CASE(
-    "csr -> coo -> csc dense-equivalence (transpose-of-transpose)",
-    "[round_trip][csr][coo][csc]") {
+TEST_CASE("csr -> coo -> csc dense-equivalence (transpose-of-transpose)",
+          "[round_trip][csr][coo][csc]") {
   auto csr = make_banded_csr(8, 2, 1);
   coo_t<int, float, memory::memory_space_t::host> coo(csr);
   csc_t<int, int, float, memory::memory_space_t::host> csc(coo);

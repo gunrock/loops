@@ -33,7 +33,8 @@ int main(int argc, char** argv) {
 
   vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10,
+                                         /*seed=*/42u);
 
   auto timer = algorithms::spmv::csc_thread_mapped(csc, x, y);
 

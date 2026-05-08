@@ -41,8 +41,7 @@ using namespace loops::testing;
 namespace {
 
 template <typename setup_t, typename atom_size_t>
-__global__ void thread_mapped_visit_kernel(setup_t config,
-                                           int* visit_counts) {
+__global__ void thread_mapped_visit_kernel(setup_t config, int* visit_counts) {
   for (auto t : config.tiles()) {
     for (auto a : config.atoms(t)) {
       atomicAdd(&visit_counts[a], 1);
@@ -56,11 +55,10 @@ TEST_CASE("schedule::thread_mapped visits every atom exactly once",
           "[schedule][thread_mapped][coverage]") {
   // 4 tiles, 9 atoms, the third tile deliberately empty -> the schedule
   // must not stall or double-visit on the empty-tile boundary.
-  auto csr_h = coords_to_csr(
-      4, 4,
-      /*row_idx=*/{0, 0, 0, 1, 1, 3, 3, 3, 3},
-      /*col_idx=*/{0, 1, 2, 0, 3, 0, 1, 2, 3},
-      /*values=*/{1, 1, 1, 1, 1, 1, 1, 1, 1});
+  auto csr_h = coords_to_csr(4, 4,
+                             /*row_idx=*/{0, 0, 0, 1, 1, 3, 3, 3, 3},
+                             /*col_idx=*/{0, 1, 2, 0, 3, 0, 1, 2, 3},
+                             /*values=*/{1, 1, 1, 1, 1, 1, 1, 1, 1});
   REQUIRE(csr_h.nnzs == 9);
 
   csr_t<int, int, float> csr_d(csr_h);
@@ -86,9 +84,8 @@ TEST_CASE("schedule::thread_mapped visits every atom exactly once",
   }
 }
 
-TEST_CASE(
-    "schedule::thread_mapped is robust to over-subscribed grids",
-    "[schedule][thread_mapped][coverage]") {
+TEST_CASE("schedule::thread_mapped is robust to over-subscribed grids",
+          "[schedule][thread_mapped][coverage]") {
   // Same matrix as above but launch with a grid much wider than num_tiles
   // so the grid-stride range exercises the "thread has nothing to do" path.
   auto csr_h = make_banded_csr(8, 1, 1);

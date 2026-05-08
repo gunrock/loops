@@ -48,13 +48,11 @@ make_long_row_csr(int rows, int nnz_per_row) {
       // Alternating sign with a small magnitude bias keeps the row
       // sum non-trivial while @c sum_of_abs is much larger -- the
       // catastrophic-cancellation regime.
-      float v = (k % 2 == 0 ? 1.0f : -1.0f) +
-                static_cast<float>(k) * 1e-4f;
+      float v = (k % 2 == 0 ? 1.0f : -1.0f) + static_cast<float>(k) * 1e-4f;
       vs.push_back(v);
     }
   }
-  return coords_to_csr(rows, rows, std::move(ri), std::move(ci),
-                       std::move(vs));
+  return coords_to_csr(rows, rows, std::move(ri), std::move(ci), std::move(vs));
 }
 
 }  // namespace
@@ -76,21 +74,20 @@ struct device_run {
 device_run run_thread_mapped(
     const loops::csr_t<index_t, offset_t, type_t, mem::host>& h_csr,
     const loops::vector_t<type_t, mem::host>& h_x) {
-  device_run dr{
-      loops::csr_t<index_t, offset_t, type_t, mem::device>(h_csr),
-      loops::vector_t<type_t, mem::device>(h_x),
-      loops::vector_t<type_t, mem::device>(h_csr.rows, type_t{0})};
+  device_run dr{loops::csr_t<index_t, offset_t, type_t, mem::device>(h_csr),
+                loops::vector_t<type_t, mem::device>(h_x),
+                loops::vector_t<type_t, mem::device>(h_csr.rows, type_t{0})};
   loops::algorithms::spmv::thread_mapped(dr.csr, dr.x, dr.y);
   return dr;
 }
 }  // namespace
 
-TEST_CASE("rigorous_validate: clean kernel passes on long rows",
-          "[rigorous]") {
+TEST_CASE("rigorous_validate: clean kernel passes on long rows", "[rigorous]") {
   auto h_csr = make_long_row_csr(/*rows=*/256, /*nnz_per_row=*/64);
   auto h_x_legacy = make_input_vector(h_csr);
   loops::vector_t<type_t, mem::host> h_x(h_csr.cols);
-  for (std::size_t i = 0; i < h_csr.cols; ++i) h_x[i] = h_x_legacy[i];
+  for (std::size_t i = 0; i < h_csr.cols; ++i)
+    h_x[i] = h_x_legacy[i];
 
   auto dr = run_thread_mapped(h_csr, h_x);
   auto report = loops::reference::rigorously_validate_spmv(dr.csr, dr.x,
@@ -103,12 +100,12 @@ TEST_CASE("rigorous_validate: clean kernel passes on long rows",
   REQUIRE(report.max_gpu_rel_error < 1e-3);
 }
 
-TEST_CASE("rigorous_validate: corrupted output is flagged",
-          "[rigorous]") {
+TEST_CASE("rigorous_validate: corrupted output is flagged", "[rigorous]") {
   auto h_csr = make_banded_csr(/*n=*/128, /*lower=*/2, /*upper=*/2);
   auto h_x_legacy = make_input_vector(h_csr);
   loops::vector_t<type_t, mem::host> h_x(h_csr.cols);
-  for (std::size_t i = 0; i < h_csr.cols; ++i) h_x[i] = h_x_legacy[i];
+  for (std::size_t i = 0; i < h_csr.cols; ++i)
+    h_x[i] = h_x_legacy[i];
 
   auto dr = run_thread_mapped(h_csr, h_x);
 
@@ -134,7 +131,8 @@ TEST_CASE("rigorous_validate: f64 reference matches f32 reference on identity",
   auto h_csr = make_identity_csr(/*n=*/64);
   auto h_x_legacy = make_input_vector(h_csr);
   loops::vector_t<type_t, mem::host> h_x(h_csr.cols);
-  for (std::size_t i = 0; i < h_csr.cols; ++i) h_x[i] = h_x_legacy[i];
+  for (std::size_t i = 0; i < h_csr.cols; ++i)
+    h_x[i] = h_x_legacy[i];
 
   auto dr = run_thread_mapped(h_csr, h_x);
   auto report = loops::reference::rigorously_validate_spmv(dr.csr, dr.x,

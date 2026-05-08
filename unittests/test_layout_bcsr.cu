@@ -55,5 +55,6 @@ TEST_CASE("layout::bcsr with one block-row containing all blocks",
   check_layout_invariants(lay, 6);
   check_tile_of_round_trip(lay);
   CHECK(lay.num_tiles() == 1);
-  for (int a = 0; a < 6; ++a) CHECK(lay.tile_of(a) == 0);
+  for (int a = 0; a < 6; ++a)
+    CHECK(lay.tile_of(a) == 0);
 }

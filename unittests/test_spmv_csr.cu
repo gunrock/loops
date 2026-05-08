@@ -56,8 +56,7 @@ TEST_CASE("spmv: group_mapped (cooperative-group reduction)",
   });
 }
 
-TEST_CASE("spmv: work_oriented (NZ-balanced)",
-          "[spmv][csr][work_oriented]") {
+TEST_CASE("spmv: work_oriented (NZ-balanced)", "[spmv][csr][work_oriented]") {
   run_battery("work_oriented", [](const csr_host_t& csr, const x_host_t& x) {
     return run_csr_spmv(csr, x, [](auto& csr_d, auto& x_d, auto& y_d) {
       algorithms::spmv::work_oriented(csr_d, x_d, y_d);
@@ -65,8 +64,7 @@ TEST_CASE("spmv: work_oriented (NZ-balanced)",
   });
 }
 
-TEST_CASE("spmv: merge_path (Merrill-Garland)",
-          "[spmv][csr][merge_path]") {
+TEST_CASE("spmv: merge_path (Merrill-Garland)", "[spmv][csr][merge_path]") {
   run_battery("merge_path", [](const csr_host_t& csr, const x_host_t& x) {
     return run_csr_spmv(csr, x, [](auto& csr_d, auto& x_d, auto& y_d) {
       algorithms::spmv::merge_path_flat(csr_d, x_d, y_d);

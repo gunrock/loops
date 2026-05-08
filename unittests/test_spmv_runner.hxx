@@ -41,8 +41,7 @@ namespace testing {
 
 namespace detail {
 
-inline std::vector<float> pull_y(const vector_t<float>& y_d,
-                                 std::size_t rows) {
+inline std::vector<float> pull_y(const vector_t<float>& y_d, std::size_t rows) {
   std::vector<float> y_h(rows);
   cudaMemcpy(y_h.data(), thrust::raw_pointer_cast(y_d.data()),
              rows * sizeof(float), cudaMemcpyDeviceToHost);

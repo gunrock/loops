@@ -26,8 +26,7 @@ TEST_CASE("math::ceil_div basic divisible cases", "[util][math][ceil_div]") {
   CHECK(math::ceil_div(100, 10) == 10);
 }
 
-TEST_CASE("math::ceil_div rounds up on remainders",
-          "[util][math][ceil_div]") {
+TEST_CASE("math::ceil_div rounds up on remainders", "[util][math][ceil_div]") {
   CHECK(math::ceil_div(1, 2) == 1);
   CHECK(math::ceil_div(3, 2) == 2);
   CHECK(math::ceil_div(7, 3) == 3);

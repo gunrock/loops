@@ -26,11 +26,9 @@ using namespace loops::testing;
 
 TEST_CASE("spmv: flat_partitioned (K=4 atoms-per-tile via partitioner)",
           "[spmv][partitioned][flat]") {
-  run_battery("flat_partitioned",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_csr_spmv(
-                    csr, x, [](auto& csr_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::flat_partitioned(csr_d, x_d, y_d);
-                    });
-              });
+  run_battery("flat_partitioned", [](const csr_host_t& csr, const x_host_t& x) {
+    return run_csr_spmv(csr, x, [](auto& csr_d, auto& x_d, auto& y_d) {
+      algorithms::spmv::flat_partitioned(csr_d, x_d, y_d);
+    });
+  });
 }

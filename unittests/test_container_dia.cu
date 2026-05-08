@@ -20,8 +20,7 @@
 using namespace loops;
 using namespace loops::testing;
 
-TEST_CASE("dia_t default constructor zeros every field",
-          "[container][dia]") {
+TEST_CASE("dia_t default constructor zeros every field", "[container][dia]") {
   dia_t<int, int, float> d;
   CHECK(d.rows == 0);
   CHECK(d.cols == 0);
@@ -32,9 +31,10 @@ TEST_CASE("dia_t default constructor zeros every field",
   CHECK(d.values.size() == 0);
 }
 
-TEST_CASE("csr_t->dia_t: diagonal discovery picks up exactly the populated "
-          "(c - r) values",
-          "[container][dia][conversion]") {
+TEST_CASE(
+    "csr_t->dia_t: diagonal discovery picks up exactly the populated "
+    "(c - r) values",
+    "[container][dia][conversion]") {
   // A 1-lower / 2-upper banded matrix populates four diagonals per row:
   // offsets {-1, 0, 1, 2} (the boundary rows touch fewer).
   auto h_csr = make_banded_csr(5, 1, 2);

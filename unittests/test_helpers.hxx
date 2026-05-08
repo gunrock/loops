@@ -45,7 +45,8 @@
 namespace loops {
 namespace testing {
 
-using csr_host_t = loops::csr_t<int, int, float, loops::memory::memory_space_t::host>;
+using csr_host_t =
+    loops::csr_t<int, int, float, loops::memory::memory_space_t::host>;
 using x_host_t = loops::vector_t<float, loops::memory::memory_space_t::host>;
 
 /// Convert a (row_indices, col_indices, values) coordinate triple into a
@@ -63,14 +64,14 @@ inline csr_host_t coords_to_csr(int rows,
 
   // Sort by (row, col) to keep within-row order canonical.
   std::vector<std::size_t> perm(nnz);
-  for (std::size_t i = 0; i < nnz; ++i) perm[i] = i;
+  for (std::size_t i = 0; i < nnz; ++i)
+    perm[i] = i;
   std::sort(perm.begin(), perm.end(), [&](std::size_t a, std::size_t b) {
-    return std::tie(row_idx[a], col_idx[a]) <
-           std::tie(row_idx[b], col_idx[b]);
+    return std::tie(row_idx[a], col_idx[a]) < std::tie(row_idx[b], col_idx[b]);
   });
 
-  csr_host_t csr(static_cast<std::size_t>(rows),
-                 static_cast<std::size_t>(cols), nnz);
+  csr_host_t csr(static_cast<std::size_t>(rows), static_cast<std::size_t>(cols),
+                 nnz);
 
   for (std::size_t i = 0; i <= static_cast<std::size_t>(rows); ++i)
     csr.offsets[i] = 0;
@@ -167,9 +168,9 @@ inline csr_host_t make_skewed_csr(int rows,
     }
   };
   add_row(0, std::min(heavy_row_nnz, cols));
-  for (int r = 1; r < rows; ++r) add_row(r, std::min(light_row_nnz, cols));
-  return coords_to_csr(rows, cols, std::move(ri), std::move(ci),
-                       std::move(vs));
+  for (int r = 1; r < rows; ++r)
+    add_row(r, std::min(light_row_nnz, cols));
+  return coords_to_csr(rows, cols, std::move(ri), std::move(ci), std::move(vs));
 }
 
 /// Sprinkles entries with the requested density, then deliberately empties
@@ -186,7 +187,8 @@ inline csr_host_t make_empty_row_csr(int rows,
   std::vector<int> ri, ci;
   std::vector<float> vs;
   for (int r = 0; r < rows; ++r) {
-    if (empty_every > 0 && (r % empty_every) == 0) continue;
+    if (empty_every > 0 && (r % empty_every) == 0)
+      continue;
     for (int c = 0; c < cols; ++c) {
       if (dens_dist(rng) < density) {
         ri.push_back(r);
@@ -195,8 +197,7 @@ inline csr_host_t make_empty_row_csr(int rows,
       }
     }
   }
-  return coords_to_csr(rows, cols, std::move(ri), std::move(ci),
-                       std::move(vs));
+  return coords_to_csr(rows, cols, std::move(ri), std::move(ci), std::move(vs));
 }
 
 /// Uniformly random sparse matrix with deterministic seed. Removes
@@ -220,8 +221,7 @@ inline csr_host_t make_random_csr(int rows,
       }
     }
   }
-  return coords_to_csr(rows, cols, std::move(ri), std::move(ci),
-                       std::move(vs));
+  return coords_to_csr(rows, cols, std::move(ri), std::move(ci), std::move(vs));
 }
 
 /// Deterministic input vector sized to match @c csr.cols .
@@ -230,7 +230,8 @@ inline x_host_t make_input_vector(const csr_host_t& csr,
   std::mt19937 rng(seed);
   std::uniform_real_distribution<float> dist(0.5f, 1.5f);
   x_host_t x(csr.cols);
-  for (std::size_t i = 0; i < csr.cols; ++i) x[i] = dist(rng);
+  for (std::size_t i = 0; i < csr.cols; ++i)
+    x[i] = dist(rng);
   return x;
 }
 
@@ -256,7 +257,8 @@ inline std::size_t count_mismatches(const float* d_y,
              cudaMemcpyDeviceToHost);
   std::size_t errs = 0;
   for (std::size_t i = 0; i < y_ref.size(); ++i) {
-    if (!nearly_equal(h[i], y_ref[i], rtol, atol)) ++errs;
+    if (!nearly_equal(h[i], y_ref[i], rtol, atol))
+      ++errs;
   }
   return errs;
 }

@@ -92,7 +92,8 @@ struct ell_t {
     std::size_t mpr = 0;
     for (std::size_t r = 0; r < h.rows; ++r) {
       auto deg = static_cast<std::size_t>(h.offsets[r + 1] - h.offsets[r]);
-      if (deg > mpr) mpr = deg;
+      if (deg > mpr)
+        mpr = deg;
     }
     return mpr;
   }
