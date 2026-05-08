@@ -101,11 +101,6 @@ target_link_libraries(loops
     CUDA::cuda_driver
 )
 
-target_sources(loops
-  INTERFACE
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/loops/container/detail/mmio.cpp"
-)
-
 # ----- Compile flags ------------------------------------------------------
 # Host-side warnings (CXX). NVCC forwards these via -Xcompiler.
 set(LOOPS_HOST_WARNINGS
