@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <loops/error.hxx>
 #include <loops/stride_ranges.hxx>
 #include <loops/util/math.hxx>
 #include <loops/util/search.hxx>
@@ -21,6 +22,7 @@
 #include <loops/container/coordinate.hxx>
 #include <loops/container/layout.hxx>
 
+#include <thrust/device_vector.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/execution_policy.h>
 #include <thrust/pair.h>

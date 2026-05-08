@@ -11,7 +11,19 @@
 
 #pragma once
 
+/// Compile-time element type for the SpMV examples.
+///
+/// CMake builds @c .f32 (default) and @c .f64 variants of every example
+/// by injecting @c -DLOOPS_VALUE_T=float or @c -DLOOPS_VALUE_T=double .
+/// Sources read @c using @c type_t = LOOPS_VALUE_T; , so adding a new
+/// precision is one CMake target + one macro define -- no per-example
+/// edits.
+#ifndef LOOPS_VALUE_T
+#define LOOPS_VALUE_T float
+#endif
+
 #include <loops/util/generate.hxx>
+#include <loops/util/reference.hxx>
 #include <loops/container/formats.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/container/market.hxx>
@@ -29,6 +41,7 @@ struct parameters_t {
   std::string filename;
   bool validate;
   bool verbose;
+  bool rigorous;
   cxxopts::Options options;
 
   /**
@@ -39,13 +52,13 @@ struct parameters_t {
    */
   parameters_t(int argc, char** argv)
       : options(argv[0], "Sparse Matrix-Vector Multiplication") {
-    // Add command line options
     options.add_options()("h,help", "Print help")                   // help
         ("m,market", "Matrix file", cxxopts::value<std::string>())  // mtx
         ("validate", "CPU validation")                              // validate
-        ("v,verbose", "Verbose output");                            // verbose
+        ("rigorous",
+         "Rigorous validation: f64 reference + Wilkinson per-row bound")  //
+        ("v,verbose", "Verbose output");                                  //
 
-    // Parse command line arguments
     auto result = options.parse(argc, argv);
 
     if (result.count("help") || (result.count("market") == 0)) {
@@ -65,17 +78,10 @@ struct parameters_t {
       std::exit(0);
     }
 
-    if (result.count("validate") == 1) {
-      validate = true;
-    } else {
-      validate = false;
-    }
-
-    if (result.count("verbose") == 1) {
-      verbose = true;
-    } else {
-      verbose = false;
-    }
+    validate = result.count("validate") == 1;
+    rigorous = result.count("rigorous") == 1;
+    verbose = result.count("verbose") == 1;
+    if (rigorous) validate = true;  // rigorous implies validate
   }
 };
 
@@ -85,64 +91,54 @@ using namespace loops;
 using namespace loops::memory;
 
 /**
- * @brief CPU SpMV implementation.
+ * @brief Example-side validation: compute the host CSR reference, count
+ * mismatches against the GPU result, and print a one-line summary.
  *
- * @tparam index_t
- * @tparam offset_t
- * @tparam type_t
- * @param csr device CSR matrix.
- * @param x device input vector.
- * @return loops::vector_t<type_t, memory_space_t::host> device output vector.
- */
-template <typename index_t, typename offset_t, typename type_t>
-loops::vector_t<type_t, memory_space_t::host> reference(
-    loops::csr_t<index_t, offset_t, type_t, memory_space_t::device>& csr,
-    loops::vector_t<type_t, memory_space_t::device>& x) {
-  // Copy data to CPU.
-  loops::csr_t<index_t, offset_t, type_t, memory_space_t::host> csr_h(csr);
-  loops::vector_t<type_t, memory_space_t::host> x_h(x);
-  loops::vector_t<type_t, memory_space_t::host> y_h(x_h.size());
-
-  for (auto row = 0; row < csr_h.rows; ++row) {
-    type_t sum = 0;
-    for (auto nz = csr_h.offsets[row]; nz < csr_h.offsets[row + 1]; ++nz) {
-      sum += csr_h.values[nz] * x_h[csr_h.indices[nz]];
-    }
-    y_h[row] = sum;
-  }
-
-  return y_h;
-}
-
-/**
- * @brief Validation for SpMV.
+ * Both the reference computation and the mismatch counting live in
+ * @c loops::reference (see @c include/loops/util/reference.hxx ); this
+ * thin wrapper exists so the example binaries can keep the pretty
+ * "Matrix / Dimensions / Errors" stdout block the test harness scrapes.
  *
- * @tparam index_t Column indices type.
- * @tparam offset_t Row offset type.
- * @tparam type_t Value type.
- * @param parameters Parameters.
- * @param csr CSR matrix.
- * @param x Input vector.
- * @param y Output vector.
+ * When @c parameters.rigorous is set, additionally runs
+ * @c rigorously_validate_spmv (double-precision reference + per-row
+ * Wilkinson bound) and reports a @c VERDICT line:
+ *   - @c NOT_A_BUG if no row exceeds the per-row floating-point bound
+ *     against the f64 reference (the @e naive errors are then just
+ *     tolerance noise).
+ *   - @c POTENTIAL_BUG otherwise.
  */
 template <typename index_t, typename offset_t, typename type_t>
 void validate(parameters_t& parameters,
               csr_t<index_t, offset_t, type_t>& csr,
               vector_t<type_t>& x,
               vector_t<type_t>& y) {
-  // Validation code, can be safely ignored.
-  auto h_y = reference(csr, x);
-
-  std::size_t errors = util::equal(
-      y.data().get(), h_y.data(), csr.rows,
-      [](const type_t a, const type_t b) { return std::abs(a - b) > 1e-2; },
-      parameters.verbose);
+  auto h_y = loops::reference::spmv(csr, x);
+  std::size_t errors = loops::reference::count_errors(
+      y.data().get(), h_y.data(), csr.rows, parameters.verbose);
 
   std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
             << std::endl;
   std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
             << csr.nnzs << ")" << std::endl;
   std::cout << "Errors:\t\t" << errors << std::endl;
+
+  if (!parameters.rigorous) return;
+
+  auto report = loops::reference::rigorously_validate_spmv(
+      csr, x, y.data().get(),
+      /*wilkinson_k=*/8.0, /*atol_floor=*/1e-3,
+      parameters.verbose);
+
+  std::cout << "WilkinsonK:\t" << report.wilkinson_k << std::endl;
+  std::cout << "NaiveMismatches:\t" << report.naive_mismatches << std::endl;
+  std::cout << "F32BaselineOverruns:\t" << report.f32_baseline_overruns
+            << std::endl;
+  std::cout << "GPUOverruns:\t" << report.gpu_overruns << std::endl;
+  std::cout << "MaxAbsError:\t" << report.max_gpu_abs_error << std::endl;
+  std::cout << "MaxRelError:\t" << report.max_gpu_rel_error << std::endl;
+  std::cout << "Verdict:\t"
+            << (report.gpu_overruns == 0 ? "NOT_A_BUG" : "POTENTIAL_BUG")
+            << std::endl;
 }
 
 }  // namespace cpu

@@ -17,6 +17,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
+#include <loops/util/timer.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
 

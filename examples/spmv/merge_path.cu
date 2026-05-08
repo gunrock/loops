@@ -17,7 +17,7 @@ using namespace loops;
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
-  using type_t = float;
+  using type_t = LOOPS_VALUE_T;
 
   // ... I/O parameters, mtx, etc.
   parameters_t parameters(argc, argv);
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   vector_t<type_t> y(csr.rows);
 
   // Generate random numbers between [0, 1].
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
   // thrust::fill(x.begin(), x.end(), 2);
 
   // Run the benchmark.

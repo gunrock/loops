@@ -198,7 +198,7 @@ __global__ void __custom_layout_spmv(setup_t config,
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
-  using type_t = float;
+  using type_t = LOOPS_VALUE_T;
 
   parameters_t parameters(argc, argv);
 
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
 
   vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
 
   /// Wire the user-defined layout into the existing thread-mapped schedule.
   using tile_id_t = index_t;
