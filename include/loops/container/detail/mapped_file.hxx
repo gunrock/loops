@@ -85,17 +85,16 @@ class mapped_file_t {
                               "mapped_file_t: could not open " + path);
 
     LARGE_INTEGER sz;
-    error::throw_if_exception(
-        GetFileSizeEx(file_, &sz) == 0,
-        "mapped_file_t: could not query size of " + path);
+    error::throw_if_exception(GetFileSizeEx(file_, &sz) == 0,
+                              "mapped_file_t: could not query size of " + path);
     size_ = static_cast<std::size_t>(sz.QuadPart);
 
     if (size_ > 0) {
       mapping_ =
           CreateFileMappingA(file_, nullptr, PAGE_READONLY, 0, 0, nullptr);
-      error::throw_if_exception(mapping_ == nullptr,
-                                "mapped_file_t: CreateFileMapping failed for " +
-                                    path);
+      error::throw_if_exception(
+          mapping_ == nullptr,
+          "mapped_file_t: CreateFileMapping failed for " + path);
       data_ = static_cast<const char*>(
           MapViewOfFile(mapping_, FILE_MAP_READ, 0, 0, 0));
       error::throw_if_exception(
@@ -103,8 +102,7 @@ class mapped_file_t {
     }
 #else
     fd_ = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
-    error::throw_if_exception(fd_ < 0,
-                              "mapped_file_t: could not open " + path);
+    error::throw_if_exception(fd_ < 0, "mapped_file_t: could not open " + path);
 
     struct stat st;
     error::throw_if_exception(::fstat(fd_, &st) != 0,
@@ -162,16 +160,21 @@ class mapped_file_t {
 
   void release() noexcept {
 #if defined(_WIN32)
-    if (data_) UnmapViewOfFile(data_);
-    if (mapping_) CloseHandle(mapping_);
-    if (file_ != INVALID_HANDLE_VALUE) CloseHandle(file_);
+    if (data_)
+      UnmapViewOfFile(data_);
+    if (mapping_)
+      CloseHandle(mapping_);
+    if (file_ != INVALID_HANDLE_VALUE)
+      CloseHandle(file_);
     data_ = nullptr;
     size_ = 0;
     mapping_ = nullptr;
     file_ = INVALID_HANDLE_VALUE;
 #else
-    if (data_) ::munmap(const_cast<char*>(data_), size_);
-    if (fd_ >= 0) ::close(fd_);
+    if (data_)
+      ::munmap(const_cast<char*>(data_), size_);
+    if (fd_ >= 0)
+      ::close(fd_);
     data_ = nullptr;
     size_ = 0;
     fd_ = -1;
