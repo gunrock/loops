@@ -14,13 +14,31 @@ set(LOOPS_SPMV_SOURCES
   dia_thread_mapped.cu
 )
 
+# Each SpMV example compiles for two precisions:
+#   - <name>.f32  (LOOPS_VALUE_T=float)
+#   - <name>.f64  (LOOPS_VALUE_T=double)
+# Sources read `using type_t = LOOPS_VALUE_T;`, so we just feed a different
+# preprocessor define per target. Adding e.g. half-precision is one extra
+# entry below.
+set(LOOPS_SPMV_PRECISIONS f32 f64)
+
 foreach(SOURCE IN LISTS LOOPS_SPMV_SOURCES)
   get_filename_component(BASE_NAME ${SOURCE} NAME_WLE)
-  set(TARGET_NAME loops.spmv.${BASE_NAME})
+  foreach(PRECISION IN LISTS LOOPS_SPMV_PRECISIONS)
+    if(PRECISION STREQUAL f32)
+      set(VALUE_T float)
+    elseif(PRECISION STREQUAL f64)
+      set(VALUE_T double)
+    else()
+      message(FATAL_ERROR "Unknown SpMV precision '${PRECISION}'")
+    endif()
 
-  add_executable(${TARGET_NAME} ${SOURCE})
-  target_link_libraries(${TARGET_NAME} PRIVATE loops::loops)
-  loops_setup_cuda_target(${TARGET_NAME})
+    set(TARGET_NAME loops.spmv.${BASE_NAME}.${PRECISION})
+    add_executable(${TARGET_NAME} ${SOURCE})
+    target_link_libraries(${TARGET_NAME} PRIVATE loops::loops)
+    target_compile_definitions(${TARGET_NAME} PRIVATE LOOPS_VALUE_T=${VALUE_T})
+    loops_setup_cuda_target(${TARGET_NAME})
 
-  message(STATUS "Example added: ${TARGET_NAME}")
+    message(STATUS "Example added: ${TARGET_NAME}")
+  endforeach()
 endforeach()

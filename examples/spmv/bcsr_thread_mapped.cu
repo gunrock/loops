@@ -28,7 +28,7 @@ using namespace loops;
 int main(int argc, char** argv) {
   using index_t = int;
   using offset_t = int;
-  using type_t = float;
+  using type_t = LOOPS_VALUE_T;
 
   constexpr std::size_t kR = 2;
   constexpr std::size_t kC = 2;
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   vector_t<type_t> x(bcsr.num_block_cols * kC);
   vector_t<type_t> y(csr.rows);
   generate::random::uniform_distribution(x.begin(), x.begin() + csr.cols, 1,
-                                         10);
+                                         10, /*seed=*/42u);
 
   auto timer = algorithms::spmv::bcsr_thread_mapped<kR, kC>(bcsr, x, y);
 
