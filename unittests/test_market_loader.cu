@@ -172,7 +172,7 @@ TEST_CASE("matrix_market_t expands symmetric off-diagonals",
   temp_mtx_t mtx(
       "%%MatrixMarket matrix coordinate real symmetric\n"
       "% header comment\n"
-      "3 3 3\n"
+      "3 3 4\n"
       "1 1 1.0\n"
       "2 1 2.0\n"
       "3 3 4.0\n"
