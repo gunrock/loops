@@ -15,6 +15,7 @@
 #include <loops/util/math.hxx>
 
 #include <cstdint>
+#include <limits>
 
 using namespace loops;
 

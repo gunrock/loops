@@ -29,12 +29,15 @@ int main(int argc, char** argv) {
   csr_t<index_t, offset_t, type_t> csr(mtx.load(parameters.filename));
 
   // See ell_thread_mapped.cu for rationale; ELL pitch can dwarf nnz on
-  // power-law graphs and OOM the host conversion.
+  // power-law graphs and OOM the host conversion. The overflow-safe
+  // cell-count comparison mirrors that file.
   using ell_type = ell_t<index_t, type_t>;
   const std::size_t pitch = ell_type::max_nnz_per_row(csr);
-  const std::size_t bytes = pitch * csr.rows * sizeof(type_t);
   constexpr std::size_t kMaxEllBytes = std::size_t{4} << 30;  // 4 GiB
-  if (bytes > kMaxEllBytes) {
+  constexpr std::size_t kBytesPerCell = sizeof(index_t) + sizeof(type_t);
+  constexpr std::size_t kMaxCells = kMaxEllBytes / kBytesPerCell;
+  const bool too_large = pitch != 0 && csr.rows > kMaxCells / pitch;
+  if (too_large) {
     std::cout << "ell_merge_path," << mtx.dataset << "," << csr.rows << ","
               << csr.cols << "," << csr.nnzs << ",pitch=" << pitch
               << ",SKIP_TOO_LARGE_FOR_ELL" << std::endl;

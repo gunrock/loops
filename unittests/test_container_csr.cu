@@ -74,19 +74,24 @@ TEST_CASE("coo_t->csr_t conversion preserves entries (regression for "
   CHECK(coo.cols == h_csr.cols);
   CHECK(coo.nnzs == h_csr.nnzs);
 
-  // Verify the COO triples reproduce the CSR contents row-by-row.
-  std::vector<int> csr_pos(h_csr.nnzs, 0);
+  // Every COO triple must round-trip to the same (col, value) at the right
+  // CSR row. Each CSR slot may be claimed at most once so a duplicate-emit
+  // bug would surface as an unmatched residual after the loop.
+  std::vector<int> csr_claimed(h_csr.nnzs, 0);
   for (std::size_t a = 0; a < coo.nnzs; ++a) {
     int r = coo.row_indices[a];
     int c = coo.col_indices[a];
     float v = coo.values[a];
     bool found = false;
     for (auto k = h_csr.offsets[r]; k < h_csr.offsets[r + 1]; ++k) {
-      if (h_csr.indices[k] == c && h_csr.values[k] == v) {
+      if (csr_claimed[k] == 0 && h_csr.indices[k] == c &&
+          h_csr.values[k] == v) {
+        csr_claimed[k] = 1;
         found = true;
         break;
       }
     }
     CHECK(found);
   }
+  for (std::size_t k = 0; k < h_csr.nnzs; ++k) CHECK(csr_claimed[k] == 1);
 }

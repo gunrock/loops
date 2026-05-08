@@ -30,11 +30,19 @@ int main(int argc, char** argv) {
   // (one entry of pitch per max-degree vertex). Probe the pitch up-front
   // so we bail out with a structured message instead of OOM-killing the
   // process; matrices that need more should pick a different layout.
+  //
+  // Each ELL cell occupies sizeof(index_t) + sizeof(type_t) bytes (the
+  // indices and values arrays are both pitch-by-rows). Compare against
+  // the cap as a cell count to keep the multiplication overflow-safe:
+  // pitch * rows can wrap on pathological inputs (hub-heavy graphs with
+  // billions of rows) and silently slip past a post-multiply check.
   using ell_type = ell_t<index_t, type_t>;
   const std::size_t pitch = ell_type::max_nnz_per_row(csr);
-  const std::size_t bytes = pitch * csr.rows * sizeof(type_t);
   constexpr std::size_t kMaxEllBytes = std::size_t{4} << 30;  // 4 GiB
-  if (bytes > kMaxEllBytes) {
+  constexpr std::size_t kBytesPerCell = sizeof(index_t) + sizeof(type_t);
+  constexpr std::size_t kMaxCells = kMaxEllBytes / kBytesPerCell;
+  const bool too_large = pitch != 0 && csr.rows > kMaxCells / pitch;
+  if (too_large) {
     std::cout << "ell_thread_mapped," << mtx.dataset << "," << csr.rows << ","
               << csr.cols << "," << csr.nnzs << ",pitch=" << pitch
               << ",SKIP_TOO_LARGE_FOR_ELL" << std::endl;

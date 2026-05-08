@@ -30,8 +30,11 @@
 #include <loops/container/vector.hxx>
 #include <loops/memory.hxx>
 
+#include <cuda_runtime.h>
+
 #include <thrust/host_vector.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>

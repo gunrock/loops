@@ -36,11 +36,20 @@ int main(int argc, char** argv) {
   // bail out with a structured message instead of OOM-killing the process.
   // 4 GiB is generous for a single dense buffer; matrices that would need
   // more should pick a different layout.
+  //
+  // The dense values buffer dominates (num_diagonals * rows * sizeof(type_t));
+  // diag_offsets is num_diagonals * sizeof(index_t), which is small but
+  // included in the budget for completeness. Compare cells (not bytes) so
+  // the multiplication can't silently overflow on pathological inputs.
   using dia_type = dia_t<index_t, offset_t, type_t>;
   const std::size_t num_diagonals = dia_type::count_diagonals(csr);
-  const std::size_t bytes = num_diagonals * csr.rows * sizeof(type_t);
   constexpr std::size_t kMaxDiaBytes = std::size_t{4} << 30;  // 4 GiB
-  if (bytes > kMaxDiaBytes) {
+  constexpr std::size_t kBytesPerCell = sizeof(type_t);
+  constexpr std::size_t kMaxCells = kMaxDiaBytes / kBytesPerCell;
+  const bool values_too_large =
+      num_diagonals != 0 && csr.rows > kMaxCells / num_diagonals;
+  const std::size_t offsets_bytes = num_diagonals * sizeof(index_t);
+  if (values_too_large || offsets_bytes > kMaxDiaBytes) {
     std::cout << "dia_thread_mapped," << mtx.dataset << "," << csr.rows << ","
               << csr.cols << "," << csr.nnzs
               << ",num_diagonals=" << num_diagonals
