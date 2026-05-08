@@ -47,15 +47,15 @@ namespace detail {
 /// and carriage returns are *not* consumed; they're token-significant
 /// for the Matrix Market line-oriented body grammar.
 inline const char* skip_blank(const char* p, const char* end) noexcept {
-  while (p < end && (*p == ' ' || *p == '\t')) ++p;
+  while (p < end && (*p == ' ' || *p == '\t'))
+    ++p;
   return p;
 }
 
 /// Advance past any whitespace including newlines. Used between body
 /// records where we don't care about line structure.
 inline const char* skip_ws(const char* p, const char* end) noexcept {
-  while (p < end &&
-         (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n'))
+  while (p < end && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n'))
     ++p;
   return p;
 }
@@ -63,8 +63,10 @@ inline const char* skip_ws(const char* p, const char* end) noexcept {
 /// Skip to and past the next newline. Used to drop comment lines and
 /// to reach the next record after parsing a row's tokens.
 inline const char* skip_to_eol(const char* p, const char* end) noexcept {
-  while (p < end && *p != '\n') ++p;
-  if (p < end) ++p;  // step past the '\n'
+  while (p < end && *p != '\n')
+    ++p;
+  if (p < end)
+    ++p;  // step past the '\n'
   return p;
 }
 
@@ -74,8 +76,10 @@ inline const char* skip_to_eol(const char* p, const char* end) noexcept {
 inline const char* skip_comments(const char* p, const char* end) noexcept {
   for (;;) {
     p = skip_ws(p, end);
-    if (p >= end) return p;
-    if (*p != '%') return p;
+    if (p >= end)
+      return p;
+    if (*p != '%')
+      return p;
     p = skip_to_eol(p, end);
   }
 }
@@ -119,7 +123,8 @@ inline const char* parse_double(const char* p,
   buf[n] = '\0';
   char* tail = nullptr;
   v = std::strtod(buf, &tail);
-  if (tail == buf) return p;
+  if (tail == buf)
+    return p;
   return p + (tail - buf);
 #endif
 }
@@ -142,7 +147,8 @@ struct mm_typecode_t {
 /// @c loops::error::throw_if_exception on a malformed header.
 ///
 /// Grammar:
-///   %%MatrixMarket {matrix} {coordinate|array} {real|integer|pattern|complex} {general|symmetric|skew-symmetric|hermitian}
+///   %%MatrixMarket {matrix} {coordinate|array} {real|integer|pattern|complex}
+///   {general|symmetric|skew-symmetric|hermitian}
 inline const char* parse_banner(const char* p,
                                 const char* end,
                                 mm_typecode_t& tc) {
@@ -178,11 +184,14 @@ inline const char* parse_banner(const char* p,
   // Lowercase comparisons (the spec is case-insensitive for the banner
   // tokens, but in practice every dataset emits lowercase).
   auto eq_ci = [](const std::string& a, const char* b) {
-    if (a.size() != std::char_traits<char>::length(b)) return false;
+    if (a.size() != std::char_traits<char>::length(b))
+      return false;
     for (std::size_t i = 0; i < a.size(); ++i) {
       char c = a[i];
-      if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-      if (c != b[i]) return false;
+      if (c >= 'A' && c <= 'Z')
+        c = static_cast<char>(c - 'A' + 'a');
+      if (c != b[i])
+        return false;
     }
     return true;
   };

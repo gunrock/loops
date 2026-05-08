@@ -110,16 +110,16 @@ struct matrix_market_t {
 
     p = detail::parse_banner(p, end, code);
 
-    error::throw_if_exception(!code.is_matrix,
-                              "matrix-market: object must be 'matrix' in " +
-                                  filename);
+    error::throw_if_exception(
+        !code.is_matrix,
+        "matrix-market: object must be 'matrix' in " + filename);
     error::throw_if_exception(
         !code.is_coordinate,
         "matrix-market: only the coordinate (sparse) format is supported in " +
             filename);
-    error::throw_if_exception(code.is_complex,
-                              "matrix-market: complex values not supported in " +
-                                  filename);
+    error::throw_if_exception(
+        code.is_complex,
+        "matrix-market: complex values not supported in " + filename);
     error::throw_if_exception(
         code.is_hermitian || code.is_skew,
         "matrix-market: hermitian / skew-symmetric not supported in " +
@@ -141,10 +141,10 @@ struct matrix_market_t {
     // gates the eventual CSR conversion. Bail before allocating anything
     // if either type can't represent the matrix.
     error::throw_if_exception(
-        num_rows >= static_cast<std::size_t>(
-                        std::numeric_limits<index_t>::max()) ||
-            num_cols >= static_cast<std::size_t>(
-                            std::numeric_limits<index_t>::max()),
+        num_rows >=
+                static_cast<std::size_t>(std::numeric_limits<index_t>::max()) ||
+            num_cols >=
+                static_cast<std::size_t>(std::numeric_limits<index_t>::max()),
         "matrix-market: index_t overflow (rows or cols >= INT_MAX) in " +
             filename);
 
@@ -160,17 +160,18 @@ struct matrix_market_t {
     }
 
     error::throw_if_exception(
-        final_nnz >= static_cast<std::size_t>(
-                         std::numeric_limits<offset_t>::max()),
-        "matrix-market: offset_t overflow (final nnz exceeds offset_t max) in " +
+        final_nnz >=
+            static_cast<std::size_t>(std::numeric_limits<offset_t>::max()),
+        "matrix-market: offset_t overflow (final nnz exceeds offset_t max) "
+        "in " +
             filename);
 
     coo_t<index_t, type_t, memory_space_t::host> coo(
         static_cast<index_t>(num_rows), static_cast<index_t>(num_cols),
         static_cast<offset_t>(final_nnz));
 
-    parse_body(body_begin, end, header_nnz, code.is_symmetric,
-               code.is_pattern, coo);
+    parse_body(body_begin, end, header_nnz, code.is_symmetric, code.is_pattern,
+               coo);
 
     return coo;
   }
@@ -216,17 +217,16 @@ struct matrix_market_t {
       const char* q = p;
       p = detail::parse_size_t(p, end, row1);
       error::throw_if_exception(
-          p == q,
-          "matrix-market: expected row index in body (count pass)");
+          p == q, "matrix-market: expected row index in body (count pass)");
       p = detail::skip_blank(p, end);
       q = p;
       p = detail::parse_size_t(p, end, col1);
       error::throw_if_exception(
-          p == q,
-          "matrix-market: expected column index in body (count pass)");
+          p == q, "matrix-market: expected column index in body (count pass)");
       // We do not need the value here; skip the rest of the line.
       p = detail::skip_to_eol(p, end);
-      if (row1 != col1) ++off_diagonals;
+      if (row1 != col1)
+        ++off_diagonals;
     }
     return off_diagonals;
   }

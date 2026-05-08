@@ -53,9 +53,9 @@ class temp_mtx_t {
     const auto stamp = static_cast<unsigned long long>(
         std::chrono::steady_clock::now().time_since_epoch().count());
     const auto tag = counter.fetch_add(1, std::memory_order_relaxed);
-    path_ = fs::temp_directory_path() /
-            ("loops_mm_test_" + std::to_string(stamp) + "_" +
-             std::to_string(tag) + ".mtx");
+    path_ =
+        fs::temp_directory_path() / ("loops_mm_test_" + std::to_string(stamp) +
+                                     "_" + std::to_string(tag) + ".mtx");
     std::ofstream f(path_, std::ios::binary | std::ios::trunc);
     REQUIRE(f.is_open());
     f.write(body.data(), static_cast<std::streamsize>(body.size()));
