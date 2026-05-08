@@ -75,5 +75,6 @@ TEST_CASE("layout::csr handles all-empty rows", "[layout][csr][edge]") {
 
   check_layout_invariants(lay, 0);
   CHECK(lay.num_atoms() == 0);
-  for (int t = 0; t < 4; ++t) CHECK(lay.tile_size(t) == 0);
+  for (int t = 0; t < 4; ++t)
+    CHECK(lay.tile_size(t) == 0);
 }

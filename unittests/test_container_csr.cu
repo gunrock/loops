@@ -60,9 +60,10 @@ TEST_CASE("csr_t survives a host->device->host round trip",
   }
 }
 
-TEST_CASE("coo_t->csr_t conversion preserves entries (regression for "
-          "col_indices member-name fix)",
-          "[container][csr][conversion]") {
+TEST_CASE(
+    "coo_t->csr_t conversion preserves entries (regression for "
+    "col_indices member-name fix)",
+    "[container][csr][conversion]") {
   // The COO-from-CSR ctor referenced the wrong member name (csr.col_indices
   // instead of csr.indices) until daa9807 ; this test pins the conversion
   // so the bug can't sneak back in.
@@ -93,5 +94,6 @@ TEST_CASE("coo_t->csr_t conversion preserves entries (regression for "
     }
     CHECK(found);
   }
-  for (std::size_t k = 0; k < h_csr.nnzs; ++k) CHECK(csr_claimed[k] == 1);
+  for (std::size_t k = 0; k < h_csr.nnzs; ++k)
+    CHECK(csr_claimed[k] == 1);
 }

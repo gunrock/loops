@@ -20,22 +20,19 @@ using namespace loops::testing;
 
 TEST_CASE("spmv: ell_thread_mapped (one thread per ELL row)",
           "[spmv][ell][thread_mapped]") {
-  run_battery("ell_thread_mapped",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_ell_spmv(
-                    csr, x, [](auto& ell_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::ell_thread_mapped(ell_d, x_d, y_d);
-                    });
-              });
+  run_battery(
+      "ell_thread_mapped", [](const csr_host_t& csr, const x_host_t& x) {
+        return run_ell_spmv(csr, x, [](auto& ell_d, auto& x_d, auto& y_d) {
+          algorithms::spmv::ell_thread_mapped(ell_d, x_d, y_d);
+        });
+      });
 }
 
 TEST_CASE("spmv: ell_merge_path (merge-path on ELL)",
           "[spmv][ell][merge_path]") {
-  run_battery("ell_merge_path",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_ell_spmv(
-                    csr, x, [](auto& ell_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::ell_merge_path(ell_d, x_d, y_d);
-                    });
-              });
+  run_battery("ell_merge_path", [](const csr_host_t& csr, const x_host_t& x) {
+    return run_ell_spmv(csr, x, [](auto& ell_d, auto& x_d, auto& y_d) {
+      algorithms::spmv::ell_merge_path(ell_d, x_d, y_d);
+    });
+  });
 }

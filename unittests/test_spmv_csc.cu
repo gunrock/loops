@@ -23,11 +23,10 @@ using namespace loops::testing;
 
 TEST_CASE("spmv: csc_thread_mapped (one thread per column, atomicAdd)",
           "[spmv][csc][thread_mapped]") {
-  run_battery("csc_thread_mapped",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_csc_spmv(
-                    csr, x, [](auto& csc_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::csc_thread_mapped(csc_d, x_d, y_d);
-                    });
-              });
+  run_battery(
+      "csc_thread_mapped", [](const csr_host_t& csr, const x_host_t& x) {
+        return run_csc_spmv(csr, x, [](auto& csc_d, auto& x_d, auto& y_d) {
+          algorithms::spmv::csc_thread_mapped(csc_d, x_d, y_d);
+        });
+      });
 }

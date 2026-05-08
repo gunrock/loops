@@ -57,8 +57,7 @@ inline std::vector<battery_case> standard_battery() {
   b.push_back({"banded(3,4)/asym-32", make_banded_csr(32, 3, 4)});
   b.push_back({"block_diag(4,2)", make_block_diag_csr(4, 2)});
   b.push_back({"block_diag(3,3)", make_block_diag_csr(3, 3)});
-  b.push_back({"skewed(20,50,h=16,l=2)",
-               make_skewed_csr(20, 50, 16, 2)});
+  b.push_back({"skewed(20,50,h=16,l=2)", make_skewed_csr(20, 50, 16, 2)});
   b.push_back({"empty_rows(20,12,0.3,every-4)",
                make_empty_row_csr(20, 12, 0.3f, /*empty_every=*/4)});
   b.push_back({"random(50,50,0.05)", make_random_csr(50, 50, 0.05f)});
@@ -87,7 +86,8 @@ void run_battery(const std::string& kernel_label, kernel_fn_t&& kernel_fn) {
     REQUIRE(y.size() == y_ref.size());
     std::size_t errors = 0;
     for (std::size_t i = 0; i < y_ref.size(); ++i) {
-      if (!nearly_equal(y[i], y_ref[i])) ++errors;
+      if (!nearly_equal(y[i], y_ref[i]))
+        ++errors;
     }
     CHECK(errors == 0);
   }

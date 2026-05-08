@@ -81,7 +81,8 @@ struct parameters_t {
     validate = result.count("validate") == 1;
     rigorous = result.count("rigorous") == 1;
     verbose = result.count("verbose") == 1;
-    if (rigorous) validate = true;  // rigorous implies validate
+    if (rigorous)
+      validate = true;  // rigorous implies validate
   }
 };
 
@@ -122,12 +123,12 @@ void validate(parameters_t& parameters,
             << csr.nnzs << ")" << std::endl;
   std::cout << "Errors:\t\t" << errors << std::endl;
 
-  if (!parameters.rigorous) return;
+  if (!parameters.rigorous)
+    return;
 
   auto report = loops::reference::rigorously_validate_spmv(
       csr, x, y.data().get(),
-      /*wilkinson_k=*/8.0, /*atol_floor=*/1e-3,
-      parameters.verbose);
+      /*wilkinson_k=*/8.0, /*atol_floor=*/1e-3, parameters.verbose);
 
   std::cout << "WilkinsonK:\t" << report.wilkinson_k << std::endl;
   std::cout << "NaiveMismatches:\t" << report.naive_mismatches << std::endl;

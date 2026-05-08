@@ -62,6 +62,7 @@ TEST_CASE("layout::ell with zero pitch yields zero atoms",
   layout::ell<int, int> lay(4, 0);
   CHECK(lay.num_tiles() == 4);
   CHECK(lay.num_atoms() == 0);
-  for (int t = 0; t < 4; ++t) CHECK(lay.tile_size(t) == 0);
+  for (int t = 0; t < 4; ++t)
+    CHECK(lay.tile_size(t) == 0);
   check_layout_invariants(lay, 0);
 }

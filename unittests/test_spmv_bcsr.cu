@@ -23,22 +23,20 @@ using namespace loops::testing;
 
 TEST_CASE("spmv: bcsr_thread_mapped<2,2> (one thread per block-row)",
           "[spmv][bcsr][thread_mapped]") {
-  run_battery("bcsr_thread_mapped<2,2>",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_bcsr_spmv<2, 2>(
-                    csr, x, [](auto& bcsr_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::bcsr_thread_mapped(bcsr_d, x_d, y_d);
-                    });
-              });
+  run_battery("bcsr_thread_mapped<2,2>", [](const csr_host_t& csr,
+                                            const x_host_t& x) {
+    return run_bcsr_spmv<2, 2>(csr, x, [](auto& bcsr_d, auto& x_d, auto& y_d) {
+      algorithms::spmv::bcsr_thread_mapped(bcsr_d, x_d, y_d);
+    });
+  });
 }
 
 TEST_CASE("spmv: bcsr_thread_mapped<3,3> (3x3 blocks)",
           "[spmv][bcsr][thread_mapped]") {
-  run_battery("bcsr_thread_mapped<3,3>",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_bcsr_spmv<3, 3>(
-                    csr, x, [](auto& bcsr_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::bcsr_thread_mapped(bcsr_d, x_d, y_d);
-                    });
-              });
+  run_battery("bcsr_thread_mapped<3,3>", [](const csr_host_t& csr,
+                                            const x_host_t& x) {
+    return run_bcsr_spmv<3, 3>(csr, x, [](auto& bcsr_d, auto& x_d, auto& y_d) {
+      algorithms::spmv::bcsr_thread_mapped(bcsr_d, x_d, y_d);
+    });
+  });
 }

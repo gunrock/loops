@@ -42,8 +42,7 @@ TEST_CASE("layout::csc satisfies the layout contract", "[layout][csc]") {
   }
 }
 
-TEST_CASE("layout::csc handles a single-column matrix",
-          "[layout][csc][edge]") {
+TEST_CASE("layout::csc handles a single-column matrix", "[layout][csc][edge]") {
   std::vector<int> offsets_storage{0, 5};
   thrust::host_vector<int> h_offsets(offsets_storage.begin(),
                                      offsets_storage.end());

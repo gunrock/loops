@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
   if (values_too_large || offsets_bytes > kMaxDiaBytes) {
     std::cout << "dia_thread_mapped," << mtx.dataset << "," << csr.rows << ","
               << csr.cols << "," << csr.nnzs
-              << ",num_diagonals=" << num_diagonals
-              << ",SKIP_TOO_LARGE_FOR_DIA" << std::endl;
+              << ",num_diagonals=" << num_diagonals << ",SKIP_TOO_LARGE_FOR_DIA"
+              << std::endl;
     std::cout << "Matrix:\t\t" << extract_filename(parameters.filename)
               << std::endl;
     std::cout << "Dimensions:\t" << csr.rows << " x " << csr.cols << " ("
@@ -66,7 +66,8 @@ int main(int argc, char** argv) {
 
   vector_t<type_t> x(csr.cols);
   vector_t<type_t> y(csr.rows);
-  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10, /*seed=*/42u);
+  generate::random::uniform_distribution(x.begin(), x.end(), 1, 10,
+                                         /*seed=*/42u);
 
   auto timer = algorithms::spmv::dia_thread_mapped(dia, x, y);
 

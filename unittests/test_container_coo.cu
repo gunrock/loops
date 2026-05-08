@@ -58,9 +58,8 @@ TEST_CASE("csr_t->coo_t conversion preserves every entry",
   }
   for (std::size_t r = 0; r < h_csr.rows; ++r) {
     for (auto k = h_csr.offsets[r]; k < h_csr.offsets[r + 1]; ++k) {
-      CHECK(coo_set.count(std::make_tuple(static_cast<int>(r),
-                                          h_csr.indices[k], h_csr.values[k]))
-            == 1);
+      CHECK(coo_set.count(std::make_tuple(static_cast<int>(r), h_csr.indices[k],
+                                          h_csr.values[k])) == 1);
     }
   }
 }

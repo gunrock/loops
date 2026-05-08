@@ -26,8 +26,7 @@
 using namespace loops;
 using namespace loops::testing;
 
-TEST_CASE("bcsr_t default constructor zeros every field",
-          "[container][bcsr]") {
+TEST_CASE("bcsr_t default constructor zeros every field", "[container][bcsr]") {
   bcsr_t<2, 2, int, int, float> b;
   CHECK(b.rows == 0);
   CHECK(b.cols == 0);
@@ -40,9 +39,10 @@ TEST_CASE("bcsr_t default constructor zeros every field",
   CHECK(b.values.size() == 0);
 }
 
-TEST_CASE("csr_t->bcsr_t (2x2): block-diagonal matrix yields one block per "
-          "block-row",
-          "[container][bcsr][conversion]") {
+TEST_CASE(
+    "csr_t->bcsr_t (2x2): block-diagonal matrix yields one block per "
+    "block-row",
+    "[container][bcsr][conversion]") {
   // 4 dense 2x2 blocks on the diagonal of an 8x8 matrix. With R = C = 2
   // we expect num_blocks == 4, one per block-row.
   auto h_csr = make_block_diag_csr(/*num_blocks=*/4, /*block_size=*/2);

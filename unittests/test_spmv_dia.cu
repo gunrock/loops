@@ -19,11 +19,10 @@ using namespace loops::testing;
 
 TEST_CASE("spmv: dia_thread_mapped (one thread per row, no atomics)",
           "[spmv][dia][thread_mapped]") {
-  run_battery("dia_thread_mapped",
-              [](const csr_host_t& csr, const x_host_t& x) {
-                return run_dia_spmv(
-                    csr, x, [](auto& dia_d, auto& x_d, auto& y_d) {
-                      algorithms::spmv::dia_thread_mapped(dia_d, x_d, y_d);
-                    });
-              });
+  run_battery(
+      "dia_thread_mapped", [](const csr_host_t& csr, const x_host_t& x) {
+        return run_dia_spmv(csr, x, [](auto& dia_d, auto& x_d, auto& y_d) {
+          algorithms::spmv::dia_thread_mapped(dia_d, x_d, y_d);
+        });
+      });
 }

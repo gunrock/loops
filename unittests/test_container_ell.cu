@@ -31,7 +31,7 @@ TEST_CASE("ell_t default constructor zeros every field", "[container][ell]") {
 TEST_CASE("ell_t dimensioned constructor pads with sentinel and zeros",
           "[container][ell]") {
   ell_t<int, float, memory::memory_space_t::host> e(/*rows=*/4, /*cols=*/8,
-                                                     /*nnz=*/12, /*pitch=*/3);
+                                                    /*nnz=*/12, /*pitch=*/3);
   CHECK(e.rows == 4);
   CHECK(e.cols == 8);
   CHECK(e.nnzs == 12);
