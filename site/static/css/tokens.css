@@ -13,8 +13,8 @@
   --accent-muted: rgba(26, 26, 26, 0.05);
   --accent-glow: none;
 
-  --accent-gold: #DAAA00;
-  --accent-gold-muted: rgba(218, 170, 0, 0.12);
+  --rainbow: linear-gradient(135deg, #C0392B, #D4841A, #B8860B, #2D8659, #2B6CB0, #7B4BB3);
+  --rainbow-glow: 0 0 8px rgba(192,57,43,0.3), 0 0 8px rgba(43,108,176,0.3), 0 0 8px rgba(123,75,179,0.3);
 
   --border: #E5E4DF;
   --border-accent: #1A1A1A;
