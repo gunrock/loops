@@ -1,4 +1,7 @@
-[README](/README.md) > **Building**
+---
+title: Building
+description: Build instructions for loops — CMake presets, CUDA architecture selection, optional dependencies, and Docker.
+---
 
 # Building
 
