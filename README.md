@@ -32,7 +32,7 @@ cmake --build --preset release-native -j
     -m datasets/chesapeake/chesapeake.mtx --validate
 ```
 
-Other configure presets (`release-h100`, `release-a100`, `release-multi`, `debug-native`, `release-with-tests`, `ci-multi-arch`), CMake-presets-free fallback, individual example targets, and Docker setup are all covered in [docs/build.md](docs/build.md).
+Other configure presets (`release-h100`, `release-a100`, `release-multi`, `debug-native`, `release-with-tests`, `ci-multi-arch`), CMake-presets-free fallback, individual example targets, and Docker setup are all covered in the [Build documentation](https://gunrock.github.io/loops/docs/build/).
 
 ## Format-Generic Schedules
 
@@ -61,13 +61,13 @@ A worked SpMV example using `flat_uniform_occupancy<8, csr>` lives in [`examples
 
 ## Documentation
 
-Long-form documentation lives in [`docs/`](docs/):
+Full documentation is available at [gunrock.github.io/loops](https://gunrock.github.io/loops/):
 
-- [Building](docs/build.md) — full CMake-presets table, CUDA-architecture overrides, optional dependencies, and Docker.
-- [Datasets](docs/datasets.md) — fetching the SuiteSparse Matrix Collection.
-- [Experimentation](docs/experimentation.md) — running the bundled examples and the sanity check.
-- [Reproducing Results](docs/reproducing-results.md) — re-running the paper's full experiment sweep and regenerating the plots.
-- [Abstraction](docs/abstraction.md), [Background](docs/background.md), and [Load-Balancing API](docs/loadbalancing_api.md) — design notes on the underlying model.
+- [Building](https://gunrock.github.io/loops/docs/build/) — full CMake-presets table, CUDA-architecture overrides, optional dependencies, and Docker.
+- [Datasets](https://gunrock.github.io/loops/docs/datasets/) — fetching the SuiteSparse Matrix Collection.
+- [Experimentation](https://gunrock.github.io/loops/docs/experimentation/) — running the bundled examples and the sanity check.
+- [Reproducing Results](https://gunrock.github.io/loops/docs/reproducing-results/) — re-running the paper's full experiment sweep and regenerating the plots.
+- [Abstraction](https://gunrock.github.io/loops/docs/concepts/abstraction/) — design notes on the tile-atom model.
 
 ## How to Cite Loops
 Thank you for citing our work.

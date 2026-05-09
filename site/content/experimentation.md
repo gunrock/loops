@@ -1,4 +1,7 @@
-[README](/README.md) > **Experimentation**
+---
+title: Experimentation
+description: Running the bundled examples, sanity checks, and rigorous float validation.
+---
 
 # Experimentation
 
