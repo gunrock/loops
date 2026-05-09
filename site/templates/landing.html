@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>loops — Expressing Parallel Irregular Computations</title>
+  <meta name="description" content="A GPU load-balancing framework that decouples scheduling from computation.">
+  <meta property="og:title" content="loops — Expressing Parallel Irregular Computations">
+  <meta property="og:description" content="A GPU load-balancing framework that decouples scheduling from computation.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <style>
+    @font-face { font-family: 'STIX Two Text'; src: url('/static/fonts/STIXTwoText-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'STIX Two Text'; src: url('/static/fonts/STIXTwoText-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'JetBrains Mono'; src: url('/static/fonts/JetBrainsMono-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'JetBrains Mono'; src: url('/static/fonts/JetBrainsMono-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('/static/fonts/Inter-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('/static/fonts/Inter-Medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+  </style>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/syntax.css">
+  <link rel="stylesheet" href="/static/css/landing.css">
+</head>
+<body class="landing">
+  <a href="#problem" class="skip-link">Skip to content</a>
+
+  <nav class="nav-bar" role="navigation">
+    <a href="/" class="nav-logo">
+      <img src="/static/img/logo.svg" alt="">
+      <span>loops</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/docs/getting-started/">Docs</a></li>
+      <li><a href="/api/">API</a></li>
+      <li><a href="/docs/experimentation/">Examples</a></li>
+      <li><a href="https://github.com/gunrock/loops" target="_blank" rel="noopener" class="external-link">GitHub</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-content">
+      <h1>Expressing Parallel<br>Irregular Computations</h1>
+      <p class="lead">A GPU load-balancing framework that decouples scheduling from computation.</p>
+      <div class="hero-buttons">
+        <a href="/docs/getting-started/" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/gunrock/loops" class="btn btn-secondary external-link" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="problem">
+    <div class="section-label">The Problem</div>
+    <h2>I. Irregular Data Doesn&rsquo;t Fit Regular Hardware</h2>
+    <p>Sparse matrices, power-law graphs, variable-length lists &mdash; the data structures behind machine learning, numerical simulation, and graph analytics don&rsquo;t map well to the GPU&rsquo;s SIMD architecture. Na&iuml;ve thread mapping leaves some threads overloaded and others idle.</p>
+    <p>Prior solutions were tightly coupled to specific applications &mdash; one load-balancing strategy per codebase, impossible to reuse or compare.</p>
+  </section>
+
+  <section class="section" id="abstraction">
+    <div class="section-label">The Abstraction</div>
+    <h2>II. Three Concerns, Separated</h2>
+    <p>Every irregular workload is made of <strong>tiles</strong> (rows, columns, blocks) and <strong>atoms</strong> (nonzeros, elements). A <strong>schedule</strong> maps balanced groups of atoms to GPU threads. Your <strong>computation</strong> stays the same regardless of which schedule you choose.</p>
+  </section>
+
+  <section class="section" id="code">
+    <div class="section-label">The Code</div>
+    <h2>III. Same Kernel, Different Schedules</h2>
+    <p>Switch between tabs. The loop scaffolding adapts to each schedule, but look at the highlighted line &mdash; the actual computation never changes. That&rsquo;s the entire point.</p>
+    <figure class="code-figure">
+      <div class="tabbed-code">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tab-thread">thread_mapped</button>
+          <button class="tab-btn" data-tab="tab-work">work_oriented</button>
+          <button class="tab-btn" data-tab="tab-merge">merge_path</button>
+        </div>
+        <div id="tab-thread" class="tab-panel active">
+          <pre><code><span class="k">using</span> <span class="n">setup_t</span> <span class="o">=</span> <span class="n">schedule</span><span class="o">::</span><span class="n">setup</span><span class="o">&lt;</span>
+    <span class="n">schedule</span><span class="o">::</span><span class="n">algorithms_t</span><span class="o">::</span><span class="nf">thread_mapped</span><span class="o">,</span>
+    <span class="mi">1</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="n">index_t</span><span class="o">,</span> <span class="n">offset_t</span><span class="o">&gt;;</span>
+
+<span class="n">setup_t</span> <span class="nf">config</span><span class="o">(</span><span class="n">offsets</span><span class="o">,</span> <span class="n">rows</span><span class="o">,</span> <span class="n">nnzs</span><span class="o">);</span>
+
+<span class="k">for</span> <span class="o">(</span><span class="k">auto</span> <span class="n">row</span> <span class="o">:</span> <span class="n">config</span><span class="o">.</span><span class="nf">tiles</span><span class="o">())</span> <span class="o">{</span>
+  <span class="n">type_t</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="k">auto</span> <span class="n">nz</span> <span class="o">:</span> <span class="n">config</span><span class="o">.</span><span class="nf">atoms</span><span class="o">(</span><span class="n">row</span><span class="o">))</span> <span class="o">{</span>
+    <span class="hl-line"><span class="n">sum</span> <span class="o">+=</span> <span class="n">values</span><span class="o">[</span><span class="n">nz</span><span class="o">]</span> <span class="o">*</span> <span class="n">x</span><span class="o">[</span><span class="n">indices</span><span class="o">[</span><span class="n">nz</span><span class="o">]];</span></span>
+  <span class="o">}</span>
+  <span class="n">y</span><span class="o">[</span><span class="n">row</span><span class="o">]</span> <span class="o">=</span> <span class="n">sum</span><span class="o">;</span>
+<span class="o">}</span></code></pre>
+        </div>
+        <div id="tab-work" class="tab-panel">
+          <pre><code><span class="k">using</span> <span class="n">setup_t</span> <span class="o">=</span> <span class="n">schedule</span><span class="o">::</span><span class="n">setup</span><span class="o">&lt;</span>
+    <span class="n">schedule</span><span class="o">::</span><span class="n">algorithms_t</span><span class="o">::</span><span class="nf">work_oriented</span><span class="o">,</span>
+    <span class="mi">128</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="n">index_t</span><span class="o">,</span> <span class="n">offset_t</span><span class="o">&gt;;</span>
+
+<span class="n">setup_t</span> <span class="nf">config</span><span class="o">(</span><span class="n">offsets</span><span class="o">,</span> <span class="n">rows</span><span class="o">,</span> <span class="n">nnzs</span><span class="o">);</span>
+
+<span class="k">for</span> <span class="o">(</span><span class="k">auto</span> <span class="n">row</span> <span class="o">:</span> <span class="n">config</span><span class="o">.</span><span class="nf">tiles</span><span class="o">(</span><span class="n">map</span><span class="o">))</span> <span class="o">{</span>
+  <span class="n">type_t</span> <span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+  <span class="k">for</span> <span class="o">(</span><span class="k">auto</span> <span class="n">nz</span> <span class="o">:</span> <span class="n">config</span><span class="o">.</span><span class="nf">atoms</span><span class="o">(</span><span class="n">row</span><span class="o">,</span> <span class="n">map</span><span class="o">))</span> <span class="o">{</span>
+    <span class="hl-line"><span class="n">sum</span> <span class="o">+=</span> <span class="n">values</span><span class="o">[</span><span class="n">nz</span><span class="o">]</span> <span class="o">*</span> <span class="n">x</span><span class="o">[</span><span class="n">indices</span><span class="o">[</span><span class="n">nz</span><span class="o">]];</span></span>
+  <span class="o">}</span>
+  <span class="n">y</span><span class="o">[</span><span class="n">row</span><span class="o">]</span> <span class="o">=</span> <span class="n">sum</span><span class="o">;</span>
+<span class="o">}</span></code></pre>
+        </div>
+        <div id="tab-merge" class="tab-panel">
+          <pre><code><span class="k">using</span> <span class="n">setup_t</span> <span class="o">=</span> <span class="n">schedule</span><span class="o">::</span><span class="n">setup</span><span class="o">&lt;</span>
+    <span class="n">schedule</span><span class="o">::</span><span class="n">algorithms_t</span><span class="o">::</span><span class="nf">merge_path_flat</span><span class="o">,</span>
+    <span class="mi">128</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="n">index_t</span><span class="o">,</span> <span class="n">offset_t</span><span class="o">&gt;;</span>
+
+<span class="n">setup_t</span> <span class="nf">config</span><span class="o">(</span><span class="n">meta</span><span class="o">,</span> <span class="n">buffer</span><span class="o">,</span> <span class="n">offsets</span><span class="o">,</span> <span class="n">rows</span><span class="o">,</span> <span class="n">nnzs</span><span class="o">);</span>
+
+<span class="k">for</span> <span class="o">(</span><span class="k">auto</span> <span class="n">vid</span> <span class="o">:</span> <span class="n">config</span><span class="o">.</span><span class="nf">virtual_idx</span><span class="o">())</span> <span class="o">{</span>
+  <span class="k">auto</span> <span class="n">nz</span>  <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="nf">atom_idx</span><span class="o">(</span><span class="n">vid</span><span class="o">,</span> <span class="n">coord</span><span class="o">);</span>
+  <span class="k">auto</span> <span class="n">row</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="nf">tile_idx</span><span class="o">(</span><span class="n">coord</span><span class="o">);</span>
+  <span class="hl-line"><span class="n">sum</span> <span class="o">+=</span> <span class="n">values</span><span class="o">[</span><span class="n">nz</span><span class="o">]</span> <span class="o">*</span> <span class="n">x</span><span class="o">[</span><span class="n">indices</span><span class="o">[</span><span class="n">nz</span><span class="o">]];</span></span>
+<span class="o">}</span></code></pre>
+        </div>
+        <div style="padding: 0 var(--space-4) var(--space-2); text-align: right;">
+          <button class="code-copy">Copy</button>
+        </div>
+      </div>
+      <figcaption class="figure-caption">
+        <strong>Figure 1.</strong> SpMV kernel across three scheduling strategies. The computation (highlighted) is invariant &mdash; only the schedule setup adapts.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="section" id="layouts">
+    <div class="section-label">Format-Generic Layouts</div>
+    <h2>IV. Any Sparse Format, Same Schedules</h2>
+    <p>The four scheduling algorithms talk to workloads through a small <strong>layout view</strong> contract. Any struct that exposes the contract can drive any schedule without modification.</p>
+    <div class="layout-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Layout</th>
+            <th>Tile is a&hellip;</th>
+            <th>Atom is a&hellip;</th>
+            <th>Container</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>layout::csr</code></td><td>row</td><td>nonzero</td><td><code>csr_t</code></td></tr>
+          <tr><td><code>layout::csc</code></td><td>column</td><td>nonzero</td><td><code>csc_t</code></td></tr>
+          <tr><td><code>layout::coo</code></td><td>nonzero</td><td>nonzero</td><td><code>coo_t</code></td></tr>
+          <tr><td><code>layout::ell</code></td><td>row</td><td>bucketed nz</td><td><code>ell_t</code></td></tr>
+          <tr><td><code>layout::bcsr</code></td><td>block-row</td><td>dense R&times;C block</td><td><code>bcsr_t</code></td></tr>
+          <tr><td><code>layout::dia</code></td><td>row</td><td>diagonal cell</td><td><code>dia_t</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="cite">
+    <div class="section-label">Cite</div>
+    <h2>V. PPoPP 2023</h2>
+    <p>If you use <code>loops</code> in your research, please cite:</p>
+    <div class="cite-block">@inproceedings{Osama:2023:APM,
+  author    = {Muhammad Osama and Serban D. Porumbescu
+               and John D. Owens},
+  title     = {A Programming Model for {GPU} Load Balancing},
+  booktitle = {PPoPP 2023},
+  year      = 2023,
+  doi       = {10.1145/3572848.3577434},
+}<button class="code-copy" style="position:absolute;top:var(--space-2);right:var(--space-2);">Copy</button></div>
+  </section>
+
+  <footer class="footer-landing">
+    Apache-2.0 &middot; UC Davis &middot; <a href="https://github.com/gunrock">Gunrock</a> &middot; <a href="https://github.com/gunrock/loops" class="external-link" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script src="/static/js/hero-canvas.js" defer></script>
+  <script src="/static/js/nav-scroll.js" defer></script>
+  <script src="/static/js/tabs.js" defer></script>
+  <script src="/static/js/copy-code.js" defer></script>
+</body>
+</html>

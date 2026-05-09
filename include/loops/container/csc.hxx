@@ -32,13 +32,13 @@ template <typename index_t,
           typename value_t,
           memory_space_t space = memory_space_t::device>
 struct csc_t {
-  std::size_t rows;
-  std::size_t cols;
-  std::size_t nnzs;
+  std::size_t rows;  ///< Number of rows.
+  std::size_t cols;  ///< Number of columns.
+  std::size_t nnzs;  ///< Number of stored nonzeros.
 
-  vector_t<offset_t, space> offsets;  /// Aj
-  vector_t<index_t, space> indices;   /// Ap
-  vector_t<value_t, space> values;    /// Ax
+  vector_t<offset_t, space> offsets;  ///< Column offsets; length cols + 1.
+  vector_t<index_t, space> indices;   ///< Row indices; length nnzs.
+  vector_t<value_t, space> values;    ///< Nonzero values; length nnzs.
 
   /**
    * @brief Construct a new csc object with everything initialized to zero.

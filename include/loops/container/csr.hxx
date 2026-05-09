@@ -34,13 +34,13 @@ template <typename index_t,
           typename value_t,
           memory_space_t space = memory_space_t::device>
 struct csr_t {
-  std::size_t rows;
-  std::size_t cols;
-  std::size_t nnzs;
+  std::size_t rows;  ///< Number of rows.
+  std::size_t cols;  ///< Number of columns.
+  std::size_t nnzs;  ///< Number of stored nonzeros.
 
-  vector_t<offset_t, space> offsets;  /// Ap
-  vector_t<index_t, space> indices;   /// Aj
-  vector_t<value_t, space> values;    /// Ax
+  vector_t<offset_t, space> offsets;  ///< Row offsets (Ap); length rows + 1.
+  vector_t<index_t, space> indices;   ///< Column indices (Aj); length nnzs.
+  vector_t<value_t, space> values;    ///< Nonzero values (Ax); length nnzs.
 
   /**
    * @brief Construct a new csr object with everything initialized to zero.
