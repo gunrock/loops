@@ -63,16 +63,16 @@ struct bcsr_t {
   static constexpr std::size_t kBlockCols = C;
   static constexpr std::size_t kBlockSize = R * C;
 
-  std::size_t rows;            /// Original (unpadded) row count.
-  std::size_t cols;            /// Original (unpadded) col count.
-  std::size_t nnzs;            /// Original (unpadded) non-zero count.
-  std::size_t num_block_rows;  /// ceil(rows / R)
-  std::size_t num_block_cols;  /// ceil(cols / C)
-  std::size_t num_blocks;      /// Stored (non-empty) blocks.
+  std::size_t rows;            ///< Original (unpadded) row count.
+  std::size_t cols;            ///< Original (unpadded) col count.
+  std::size_t nnzs;            ///< Original (unpadded) non-zero count.
+  std::size_t num_block_rows;  ///< ceil(rows / R).
+  std::size_t num_block_cols;  ///< ceil(cols / C).
+  std::size_t num_blocks;      ///< Stored (non-empty) blocks.
 
-  vector_t<offset_t, space> block_offsets;     /// length num_block_rows + 1.
-  vector_t<index_t, space> block_col_indices;  /// length num_blocks.
-  vector_t<value_t, space> values;             /// length num_blocks * R * C.
+  vector_t<offset_t, space> block_offsets;     ///< Block-row offsets; length num_block_rows + 1.
+  vector_t<index_t, space> block_col_indices;  ///< Block-column indices; length num_blocks.
+  vector_t<value_t, space> values;             ///< Dense block values; length num_blocks * R * C.
 
   bcsr_t()
       : rows(0),
