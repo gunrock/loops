@@ -16,7 +16,8 @@
   var heartbeatIdx = -1;
   var w, h;
 
-  var GOLD = '#DAAA00';
+  var RAINBOW = ['#C0392B','#D4841A','#B8860B','#2D8659','#2B6CB0','#7B4BB3'];
+  var heartbeatColorIdx = 0;
   var PROC_COLORS = [
     '#C0392B','#D4841A','#B8860B','#2D8659','#1A8A8A','#2B6CB0',
     '#7B4BB3','#8B2252','#6B8E23','#16A085','#3498DB','#C0588A'
@@ -75,6 +76,7 @@
     if (t - lastHeartbeat > HEARTBEAT_INTERVAL) {
       lastHeartbeat = t;
       heartbeatIdx = Math.floor(Math.random() * N);
+      heartbeatColorIdx = (heartbeatColorIdx + 1) % RAINBOW.length;
     }
 
     for (var i = 0; i < dots.length; i++) {
@@ -108,7 +110,7 @@
           var alpha = (1 - dist / CONNECTION_DIST) * 0.07;
           var glow = Math.max(dots[i].glow, dots[j].glow);
           if (glow > 0.1) {
-            ctx.strokeStyle = hexToRgba(GOLD, alpha + glow * 0.15);
+            ctx.strokeStyle = hexToRgba(RAINBOW[heartbeatColorIdx], alpha + glow * 0.15);
           } else {
             ctx.strokeStyle = 'rgba(26, 26, 26, ' + alpha + ')';
           }
@@ -148,12 +150,12 @@
           ctx.fillStyle = hexToRgba(PROC_COLORS[d.procId], fadeIn * 0.75);
         }
       } else if (d.glow > 0.01) {
-        ctx.fillStyle = hexToRgba(GOLD, 0.3 + d.glow * 0.6);
+        ctx.fillStyle = hexToRgba(RAINBOW[heartbeatColorIdx], 0.3 + d.glow * 0.6);
         var glowSize = d.size + d.glow * 4;
         ctx.beginPath();
         ctx.arc(d.x, d.y, glowSize, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = hexToRgba(GOLD, 0.6 + d.glow * 0.4);
+        ctx.fillStyle = hexToRgba(RAINBOW[heartbeatColorIdx], 0.6 + d.glow * 0.4);
       } else {
         ctx.fillStyle = 'rgba(26, 26, 26, 0.25)';
       }

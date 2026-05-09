@@ -100,11 +100,16 @@ img { max-width: 100%; height: auto; }
   display: inline-block;
   font-family: var(--font-code);
   font-size: var(--text-xs);
-  padding: 2px 8px;
-  border-radius: 3px;
-  background: var(--accent-gold);
-  color: #1A1A1A;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.25)) padding-box,
+    linear-gradient(135deg, rgba(192,57,43,0.4), rgba(212,132,26,0.35), rgba(184,134,11,0.3), rgba(45,134,89,0.35), rgba(43,108,176,0.4), rgba(123,75,179,0.4)) border-box;
+  color: var(--text-primary);
   font-weight: 600;
+  border: 1.5px solid transparent;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @media (max-width: 768px) {
