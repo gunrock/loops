@@ -1,0 +1,17 @@
+PROJECT_NAME           = loops
+OUTPUT_DIRECTORY       = _doxygen
+GENERATE_XML           = YES
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+XML_PROGRAMLISTING     = YES
+INPUT                  = include/loops
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hxx *.cuh
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+JAVADOC_AUTOBRIEF      = YES
+BUILTIN_STL_SUPPORT    = YES
+EXCLUDE_PATTERNS       = */detail/*
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO

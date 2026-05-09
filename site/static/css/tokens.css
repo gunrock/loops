@@ -1,0 +1,60 @@
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-elevated: #F8F7F4;
+  --bg-surface: #F2F1EC;
+  --bg-subtle: #F7F6F1;
+
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --text-tertiary: #7A7A7A;
+
+  --accent: #1A1A1A;
+  --accent-hover: #3A3A3A;
+  --accent-muted: rgba(26, 26, 26, 0.05);
+  --accent-glow: none;
+
+  --accent-gold: #DAAA00;
+  --accent-gold-muted: rgba(218, 170, 0, 0.12);
+
+  --border: #E5E4DF;
+  --border-accent: #1A1A1A;
+
+  --success: #1E6B3A;
+  --warning: #B8860B;
+  --error: #9B1B1B;
+
+  --font-code: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-heading: 'STIX Two Text', 'Georgia', serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --text-xs: 0.8rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5625rem;
+  --text-2xl: 1.953rem;
+  --text-3xl: 2.6rem;
+  --text-4xl: 3.4rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 56px;
+  --space-9: 72px;
+
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 400ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --sidebar-width: 220px;
+  --toc-width: 180px;
+  --content-max: 640px;
+  --page-max: 1080px;
+}

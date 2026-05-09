@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>API Reference</h1>
+<p class="lead">Auto-generated from source via Doxygen. Every public type, function, and enum in the <code>loops</code> namespace.</p>
+
+<h2>Containers</h2>
+<p>Owning data structures for sparse matrix formats.</p>
+{% for item in containers %}
+<div class="api-card">
+  <div class="api-card-header">
+    <span class="badge">{{ item.kind }}</span>
+    <span class="api-card-name">{{ item.name }}</span>
+  </div>
+  <p class="api-card-brief">{{ item.brief }}</p>
+  <a href="{{ item.url }}" class="api-card-source">View details &rarr;</a>
+</div>
+{% endfor %}
+
+<h2>Layout Views</h2>
+<p>Non-owning views that implement the tile-atom layout contract.</p>
+{% for item in layouts %}
+<div class="api-card">
+  <div class="api-card-header">
+    <span class="badge">{{ item.kind }}</span>
+    <span class="api-card-name">{{ item.name }}</span>
+  </div>
+  <p class="api-card-brief">{{ item.brief }}</p>
+  <a href="{{ item.url }}" class="api-card-source">View details &rarr;</a>
+</div>
+{% endfor %}
+
+<h2>Schedules</h2>
+<p>Load-balancing algorithms that map atoms and tiles to GPU threads.</p>
+{% for item in schedules %}
+<div class="api-card">
+  <div class="api-card-header">
+    <span class="badge">{{ item.kind }}</span>
+    <span class="api-card-name">{{ item.name }}</span>
+  </div>
+  <p class="api-card-brief">{{ item.brief }}</p>
+  <a href="{{ item.url }}" class="api-card-source">View details &rarr;</a>
+</div>
+{% endfor %}
+{% endblock %}

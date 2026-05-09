@@ -1,0 +1,45 @@
+/* Keywords: ink black — the structure */
+.highlight .k, .highlight .kd, .highlight .kn, .highlight .kp,
+.highlight .kr, .highlight .kt, .highlight .nb,
+.tabbed-code .k, .tabbed-code .kd, .tabbed-code .kt { color: #2D2D2D; font-weight: 600; }
+
+/* Names/identifiers */
+.highlight .n, .highlight .nc, .highlight .nn, .highlight .no,
+.highlight .ne, .highlight .nf,
+.tabbed-code .n { color: #3A3A3A; }
+
+/* Functions: a warm brown-violet */
+.highlight .nf, .highlight .fm,
+.tabbed-code .nf { color: #7B5B3A; }
+
+/* Strings: muted olive */
+.highlight .s, .highlight .s1, .highlight .s2, .highlight .sb,
+.highlight .sc, .highlight .dl, .highlight .sa, .highlight .sh { color: #4A7A4A; }
+
+/* Numbers: goldenrod */
+.highlight .mi, .highlight .mf, .highlight .mh, .highlight .mo,
+.highlight .il, .highlight .mb,
+.tabbed-code .mi { color: #8B6914; }
+
+/* Comments: pencil grey, italic */
+.highlight .c, .highlight .c1, .highlight .cm, .highlight .cs,
+.highlight .ch, .highlight .sd { color: #9C9C8C; font-style: italic; }
+
+/* Operators/punctuation: soft grey */
+.highlight .o, .highlight .ow, .highlight .p,
+.tabbed-code .o { color: #6B6B60; }
+
+/* Preprocessor */
+.highlight .cp, .highlight .cpf { color: #8B4A5E; }
+
+/* Attributes */
+.highlight .na { color: #5A7A8A; }
+
+/* Errors */
+.highlight .err { color: #9B1B1B; }
+
+/* Whitespace */
+.highlight .w { color: var(--text-tertiary); }
+
+/* Headings in diffs */
+.highlight .gh, .highlight .gu { color: var(--text-primary); font-weight: 700; }
