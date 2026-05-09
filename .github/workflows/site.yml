@@ -36,6 +36,8 @@ jobs:
 
       - name: Build site
         run: python3 site/build.py
+        env:
+          BASE_URL: /loops
 
       - uses: actions/upload-pages-artifact@v3
         with:
