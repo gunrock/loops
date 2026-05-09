@@ -75,6 +75,11 @@ def render_markdown(text):
     html = wrap_code_blocks(html)
     html = html.replace('href="/README.md"', f'href="{BASE_URL}/"')
     html = re.sub(r'href="/README\.md#[^"]*"', f'href="{BASE_URL}/docs/getting-started/"', html)
+    html = re.sub(
+        r'href="\.\./([^"]+)"',
+        r'href="https://github.com/gunrock/loops/blob/main/\1"',
+        html,
+    )
     return html, toc_items
 
 
