@@ -31,6 +31,8 @@ STATIC = SITE / "static"
 DOCS = ROOT / "docs"
 DOXYGEN_XML = ROOT / "_doxygen" / "xml"
 
+BASE_URL = os.environ.get("BASE_URL", "/loops").rstrip("/")
+
 
 def clean():
     if OUT.exists():
@@ -43,7 +45,9 @@ def copy_static():
 
 
 def get_jinja_env():
-    return Environment(loader=FileSystemLoader(str(TEMPLATES)), autoescape=False)
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES)), autoescape=False)
+    env.globals["base"] = BASE_URL
+    return env
 
 
 def parse_frontmatter(text):
@@ -69,8 +73,8 @@ def render_markdown(text):
     for m in re.finditer(r'<h([23])\s+id="([^"]+)"[^>]*>(.+?)</h\1>', html):
         toc_items.append({"id": m.group(2), "text": re.sub(r"<[^>]+>", "", m.group(3))})
     html = wrap_code_blocks(html)
-    html = html.replace('href="/README.md"', 'href="/"')
-    html = re.sub(r'href="/README\.md#[^"]*"', 'href="/docs/getting-started/"', html)
+    html = html.replace('href="/README.md"', f'href="{BASE_URL}/"')
+    html = re.sub(r'href="/README\.md#[^"]*"', f'href="{BASE_URL}/docs/getting-started/"', html)
     return html, toc_items
 
 
@@ -139,7 +143,13 @@ def build_markdown_pages(env):
 def build_landing(env):
     src = TEMPLATES / "landing.html"
     content = src.read_text()
-    # Landing is a standalone template, not jinja-rendered (already complete HTML)
+    if BASE_URL:
+        content = content.replace('href="/', f'href="{BASE_URL}/')
+        content = content.replace("href='/", f"href='{BASE_URL}/")
+        content = content.replace('src="/', f'src="{BASE_URL}/')
+        content = content.replace("src='/", f"src='{BASE_URL}/")
+        content = content.replace("url('/", f"url('{BASE_URL}/")
+        content = content.replace('url("/', f'url("{BASE_URL}/')
     out = OUT / "index.html"
     out.write_text(content)
     print(f"  landing: / -> index.html")
@@ -268,7 +278,7 @@ def parse_doxygen_xml():
 
         short_name = name.replace("loops::", "")
         slug = short_name.replace("::", "/")
-        url = f"/api/loops/{slug}/"
+        url = f"{BASE_URL}/api/loops/{slug}/"
 
         entry = {
             "name": short_name,
