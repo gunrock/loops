@@ -43,13 +43,16 @@ template <typename index_t,
           typename value_t,
           memory_space_t space = memory_space_t::device>
 struct ell_t {
-  std::size_t rows;   ///< Number of rows.
-  std::size_t cols;   ///< Number of columns.
-  std::size_t nnzs;   ///< True non-zero count (excludes padding).
-  std::size_t pitch;  ///< Atoms per row; equals max-nnz-per-row over the matrix.
+  std::size_t rows;  ///< Number of rows.
+  std::size_t cols;  ///< Number of columns.
+  std::size_t nnzs;  ///< True non-zero count (excludes padding).
+  std::size_t
+      pitch;  ///< Atoms per row; equals max-nnz-per-row over the matrix.
 
-  vector_t<index_t, space> indices;  ///< Column indices; length rows * pitch, row-major.
-  vector_t<value_t, space> values;   ///< Nonzero values; length rows * pitch, row-major.
+  vector_t<index_t, space>
+      indices;  ///< Column indices; length rows * pitch, row-major.
+  vector_t<value_t, space>
+      values;  ///< Nonzero values; length rows * pitch, row-major.
 
   static __host__ __device__ index_t sentinel() {
     return static_cast<index_t>(-1);
