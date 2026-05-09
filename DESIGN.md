@@ -28,9 +28,59 @@ deserves room to breathe.
 
 ---
 
-## 2. Color System
+## 2. The Master Stroke
 
-### 2.1 Core palette
+Most library websites frontload everything — feature matrices, badge
+walls, API tables, "look how powerful this is" — the instant you land.
+They're desperate to impress in the first five seconds.
+
+This site earns the complexity instead.
+
+The landing page shows one thing: the Grid Dissolves animation and a
+single 10-line code snippet — two nested loops, the irreducible core of
+the library's API. The user sees the simplicity and thinks: "That's all
+there is?"
+
+Then, as they scroll deeper, the site *gradually reveals the depth*. The
+three-domain architecture appears. The layout contract surfaces. The
+format table unfolds. Each section earns the next section's complexity.
+By the time they reach the API reference, they understand *why* there are
+six layout types and four scheduling algorithms, because the site walked
+them through tiles and atoms first.
+
+**The specific master stroke moment is the tabbed code block** (§8.1,
+"CODE" section, placed ~60% down the landing page). Three tabs:
+`thread_mapped`, `work_oriented`, `merge_path`. The reader clicks
+between them and realizes: *the user code didn't change*. Only the
+`schedule::setup<>` line changed. The loops, the computation, the
+output — identical. That single moment of recognition is when the
+library's thesis clicks. It's not explained with a paragraph. It's
+*felt* through interaction.
+
+We don't put this block in the hero. We don't put it above the fold. We
+place it after the problem section and after the abstraction diagram — so
+the reader has earned enough context to understand what they're seeing.
+Without that context, it's just three code tabs. With it, it's the
+moment the library's intellectual contribution becomes visceral.
+
+**Restraint in practice:**
+- The hero has no feature badges, no "supports 6 formats!" callouts.
+- The sidebar API section starts collapsed — you expand when ready.
+- Diagrams animate only on scroll entry — they wait for the reader.
+- The accent color is used once semantically: "balanced." Every time the
+  reader sees indigo, it means "this is the solved version."
+
+The site's job is not to impress on first contact. It's to create a
+reader who, 3 minutes into scrolling, has the quiet realization that
+this small library solved something fundamental — and that the simplicity
+of `for (auto row : config.tiles())` required years of research to
+achieve.
+
+---
+
+## 3. Color System
+
+### 3.1 Core palette
 
 ```
 Token                  Hex        RGB               Usage
@@ -57,7 +107,7 @@ Token                  Hex        RGB               Usage
 --error                #EF4444    rgb(239, 68, 68)   Errors, breaking changes
 ```
 
-### 2.2 Syntax highlighting (code blocks)
+### 3.2 Syntax highlighting (code blocks)
 
 Built on the same palette. No rainbow; restrained and readable.
 
@@ -75,7 +125,39 @@ Token                  Hex        Scope
 --syn-template-param   #93C5FD    template parameters
 ```
 
-### 2.3 Diagram palette
+### 3.3 Processor palette (easter egg only — see §9.5)
+
+These colors are *never* used in the UI, documentation, or any visible
+component. They exist solely for the hidden processor-coloring mode in
+the hero animation. Each hue is assigned to a virtual processor ID.
+
+The palette is chosen for maximum perceptual distinction at small sizes
+(each cell is ~12–16px), equal luminance so no processor "pops" over
+another, and warmth — the sudden chromatic richness should feel joyful,
+not clinical.
+
+```
+Token                  Hex        Processor
+─────────────────────────────────────────────────────────────
+--proc-0               #F472B6    rose
+--proc-1               #FB923C    orange
+--proc-2               #FBBF24    amber
+--proc-3               #34D399    emerald
+--proc-4               #22D3EE    cyan
+--proc-5               #818CF8    indigo (same as accent — "home" thread)
+--proc-6               #C084FC    purple
+--proc-7               #F87171    red
+--proc-8               #A3E635    lime
+--proc-9               #2DD4BF    teal
+--proc-10              #60A5FA    blue
+--proc-11              #E879F9    fuchsia
+```
+
+When more than 12 virtual processors are shown, colors wrap with a
+reduced opacity (70%) on the second pass, creating a natural "grouped"
+feeling without needing more hues.
+
+### 3.4 Diagram palette
 
 Used for animated and static diagrams illustrating scheduling concepts.
 
@@ -88,7 +170,7 @@ Used for animated and static diagrams illustrating scheduling concepts.
 --diagram-grid         #1E1E32    Background grid lines
 ```
 
-### 2.4 Usage rules
+### 3.5 Usage rules
 
 - **One accent color.** Indigo (`#6366F1`) is the only chromatic color in
   the UI. It marks interactive elements, the current page in navigation,
@@ -103,9 +185,9 @@ Used for animated and static diagrams illustrating scheduling concepts.
 
 ---
 
-## 3. Typography
+## 4. Typography
 
-### 3.1 Type stack
+### 4.1 Type stack
 
 ```
 Role           Font              Fallback                   Weight
@@ -118,7 +200,7 @@ Body           Inter             system-ui, sans-serif      400, 500
 All three are variable-weight, open-source Google Fonts. Self-hosted via
 the site build to avoid third-party requests.
 
-### 3.2 Type scale
+### 4.2 Type scale
 
 Desktop base: `16px`. Scale factor: `1.25` (major third).
 
@@ -135,7 +217,7 @@ Token          Size      Line-height   Letter-spacing   Usage
 --text-4xl     48.8px    1.1           -0.03em          Display (hero only)
 ```
 
-### 3.3 Code typography
+### 4.3 Code typography
 
 ```css
 .code-block {
@@ -154,7 +236,7 @@ Token          Size      Line-height   Letter-spacing   Usage
 - Copy button: appears on hover, top-right, `--text-tertiary` → `--accent`
   on hover.
 
-### 3.4 Responsive scaling
+### 4.4 Responsive scaling
 
 At `< 768px`, the base drops to `15px` and the scale factor tightens to
 `1.2` (minor third). Code blocks use `13px` and gain horizontal scroll
@@ -162,9 +244,9 @@ with a faded edge mask.
 
 ---
 
-## 4. Layout & Grid
+## 5. Layout & Grid
 
-### 4.1 Page grid
+### 5.1 Page grid
 
 ```
 Desktop (≥ 1280px):
@@ -183,7 +265,7 @@ Single column. 20px side padding.
 Sidebar is a full-screen overlay. TOC is hidden (scroll-to-top button).
 ```
 
-### 4.2 Content grid
+### 5.2 Content grid
 
 Within the 720px content column, a 12-column micro-grid with 16px
 gutters handles mixed-width elements:
@@ -195,7 +277,7 @@ gutters handles mixed-width elements:
 - **Tables**: columns 1–12, horizontal scroll on overflow.
 - **Callouts/notes**: columns 1–10, left border in `--accent`.
 
-### 4.3 Spacing scale
+### 5.3 Spacing scale
 
 Based on an 8px unit:
 
@@ -213,9 +295,9 @@ Based on an 8px unit:
 
 ---
 
-## 5. Components
+## 6. Components
 
-### 5.1 Navigation sidebar
+### 6.1 Navigation sidebar
 
 ```
 ┌─────────────────────┐
@@ -250,7 +332,7 @@ Based on an 8px unit:
 Background: `--bg-elevated`. Border-right: 1px `--border`.
 Sticky, full viewport height, scrollable independently.
 
-### 5.2 Code blocks
+### 6.2 Code blocks
 
 ```
 ┌─ include/loops/schedule.hxx ────────────────────── ⧉ ┐
@@ -277,7 +359,7 @@ Sticky, full viewport height, scrollable independently.
 - Line highlighting: selected lines get `--accent-muted` background.
 - Language badge: bottom-right, `--text-tertiary`, `--text-xs`.
 
-### 5.3 Callout blocks
+### 6.3 Callout blocks
 
 Four variants, each with a left border and matching icon:
 
@@ -291,7 +373,7 @@ Danger   │  --error        │  ●  filled circle
 Background: the variant color at 8% opacity. Text: `--text-primary`.
 Title: variant color, `--text-sm`, `font-weight: 500`.
 
-### 5.4 API cards (doxygen-generated)
+### 6.4 API cards (doxygen-generated)
 
 Each class/struct/function gets a card:
 
@@ -318,7 +400,7 @@ Each class/struct/function gets a card:
 - Member list: alternating `--bg-primary` / `--bg-elevated` rows.
 - Source link: `--text-tertiary`, links to GitHub blob.
 
-### 5.5 The three-domain diagram
+### 6.5 The three-domain diagram
 
 The project's architectural diagram (data / schedule / computation) is a
 first-class component, not an image. Built in SVG, it appears on the
@@ -343,7 +425,7 @@ In the SVG version:
 - Computation column: `--text-primary` monospace text.
 - Arrows: animated dashed lines in `--accent`, 2px stroke.
 
-### 5.6 Tables
+### 6.6 Tables
 
 ```css
 table {
@@ -370,7 +452,7 @@ tr:hover td {
 }
 ```
 
-### 5.7 Buttons and links
+### 6.7 Buttons and links
 
 - **Primary button**: `--accent` background, white text, `border-radius:
   6px`, `padding: 10px 20px`. Hover: `--accent-hover`. Used sparingly
@@ -381,16 +463,16 @@ tr:hover td {
 
 ---
 
-## 6. Logo & Wordmark
+## 7. Logo & Wordmark
 
-### 6.1 Concept
+### 7.1 Concept
 
 The logo is an abstract representation of a loop (the load-balancing
 feedback cycle) rendered as a continuous geometric trace. It references
 both the `for` loop in code and the redistribution loop of atoms → tiles
 → processors → rebalance.
 
-### 6.2 Construction
+### 7.2 Construction
 
 ```
     ◌
@@ -406,23 +488,23 @@ both the `for` loop in code and the redistribution loop of atoms → tiles
 - Rendered in `--accent` on dark backgrounds, `--bg-primary` on light.
 - Minimum clear space: 1× the logo height on all sides.
 
-### 6.3 Wordmark
+### 7.3 Wordmark
 
 `loops` set in **Space Grotesk Medium**, all lowercase, tracked at
 `-0.03em`. The wordmark always appears to the right of the logo mark,
 vertically centered. On the website nav, the logo mark is `20px` tall
 and the wordmark is `16px`.
 
-### 6.4 Favicon
+### 7.4 Favicon
 
 The logo mark simplified to a single-color glyph, rendered at `32×32`
 and `16×16`. Background: `--bg-primary`. Stroke: `--accent`.
 
 ---
 
-## 7. Landing Page
+## 8. Landing Page
 
-### 7.1 Structure
+### 8.1 Structure
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -443,7 +525,7 @@ and `16×16`. Background: `--bg-primary`. Stroke: `--accent`.
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │          ◆ THE GRID DISSOLVES ANIMATION ◆          │  │
-│  │  (described in §8 — the animated hero canvas)      │  │
+│  │  (described in §9 — the animated hero canvas)      │  │
 │  └────────────────────────────────────────────────────┘  │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
@@ -490,14 +572,14 @@ and `16×16`. Background: `--bg-primary`. Stroke: `--accent`.
 │                                                          │
 │  Tabs: [ thread_mapped | work_oriented | merge_path ]    │
 │                                                          │
-│  [Code block per §5.2]                                   │
+│  [Code block per §6.2]                                   │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  ── FORMAT-GENERIC LAYOUTS ───────────────────────────   │
 │                                                          │
 │  The layout contract table from the README, rendered     │
-│  per §5.6 table styling. Each row links to the API       │
+│  per §6.6 table styling. Each row links to the API       │
 │  reference card for that layout.                         │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
@@ -515,7 +597,7 @@ and `16×16`. Background: `--bg-primary`. Stroke: `--accent`.
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 7.2 Nav bar
+### 8.2 Nav bar
 
 - Transparent over the hero, transitioning to `--bg-elevated` with a
   `backdrop-filter: blur(12px)` once the user scrolls past the hero.
@@ -525,9 +607,9 @@ and `16×16`. Background: `--bg-primary`. Stroke: `--accent`.
 
 ---
 
-## 8. Motion & Animation
+## 9. Motion & Animation
 
-### 8.1 The hero animation ("The Grid Dissolves")
+### 9.1 The hero animation ("The Grid Dissolves")
 
 A `<canvas>` element (or WebGL for performance) behind the hero text.
 
@@ -561,7 +643,7 @@ A `<canvas>` element (or WebGL for performance) behind the hero text.
 - Target: 60fps on integrated graphics; degrade gracefully by reducing
   grid size on low-power devices.
 
-### 8.2 Scroll-triggered diagrams
+### 9.2 Scroll-triggered diagrams
 
 Diagrams in the "Problem" and "Abstraction" sections animate on
 `IntersectionObserver` entry:
@@ -571,7 +653,7 @@ Diagrams in the "Problem" and "Abstraction" sections animate on
 - **Abstraction diagram**: the three columns draw in left-to-right,
   connected by animated dashed arrows.
 
-### 8.3 Micro-interactions
+### 9.3 Micro-interactions
 
 - **Page transitions**: none. The site is a multi-page static site; each
   page loads fresh. No SPA overhead.
@@ -583,7 +665,7 @@ Diagrams in the "Problem" and "Abstraction" sections animate on
 - **Copy button**: on click, icon morphs from clipboard → checkmark,
   holds 1.5s, morphs back.
 
-### 8.4 Motion tokens
+### 9.4 Motion tokens
 
 ```
 --duration-fast      100ms
@@ -594,11 +676,72 @@ Diagrams in the "Problem" and "Abstraction" sections animate on
 --ease-spring        cubic-bezier(0.34, 1.56, 0.64, 1)
 ```
 
+### 9.5 Easter egg: processor coloring ("The Giraffes")
+
+The entire site enforces one chromatic rule: indigo is the only color.
+This easter egg breaks that rule — once, for the people who find it.
+
+**Trigger:** clicking anywhere on the hero canvas during the "hold"
+phase (9–12s in the animation cycle, when the grid is balanced and
+pulsing in monochrome indigo). A subtle affordance: during the hold
+phase the cursor changes to `pointer` over the canvas — the only hint
+that something is interactive. No tooltip, no label.
+
+**Effect:** every cell in the balanced grid cross-fades from `--accent`
+to its assigned processor color (§2.3 palette). The assignment is
+deterministic: each cell's processor ID is derived from the
+load-balancing pass that produced the balanced state, so the coloring
+is a faithful visualization of how `loops` would actually distribute
+this workload across 12 GPU streaming multiprocessors.
+
+The result is a warm, vivid mosaic — rose, amber, emerald, cyan,
+purple — blooming across what was a monochrome field. The mosaic is
+balanced: no color dominates, because the load balancing made sure
+every processor got a fair share. The even distribution of color *is*
+the proof that the library works.
+
+**Animation detail:**
+
+1. **Cross-fade in** (0.6s): cells transition from `--accent` to their
+   processor color with a staggered wave delay — the sweep direction
+   mirrors the rebalancing wave from phase 3, reinforcing the visual
+   connection. Easing: `--ease-out`.
+
+2. **Color hold** (one full cycle, ~12s): the grid continues its gentle
+   pulse, but now in full color. The regular→dissolve→rebalance
+   sequence plays once *in color*: the dissolution phase scatters the
+   hues chaotically (processors losing their assigned work), and the
+   rebalancing wave re-sorts them into the even mosaic. This is the
+   payoff — seeing the algorithm work *in color* makes the balancing
+   viscerally legible.
+
+3. **Fade back** (1.2s): all cells cross-fade back to monochrome
+   `--accent`. The animation resumes its normal single-color cycle.
+   The easter egg must be re-triggered by another click during a
+   future hold phase.
+
+**Behavioral rules:**
+- Clicking during any phase *other than* the hold phase does nothing.
+  The cursor stays `default` outside the hold phase.
+- On mobile: a tap replaces the click. The hold phase is extended to
+  15s on touch devices to give a larger activation window.
+- `prefers-reduced-motion`: the color change is instant (no wave
+  stagger) but still occurs — the easter egg is about color, not
+  motion.
+- The easter egg is not mentioned anywhere on the site. No "click
+  here" hint. No changelog entry. It exists for the person who
+  lingers on the animation and wonders what happens if they touch it.
+
+**Why "The Giraffes":** in a game built on combat, the most memorable
+moment is a quiet rooftop with grazing giraffes. In a site built on
+monochrome restraint, the most memorable moment is a sudden bloom of
+color. Both are earned. Both are unexpected. Both are kind.
+
 ---
 
-## 9. Page Architecture
+## 10. Page Architecture
 
-### 9.1 Page inventory
+### 10.1 Page inventory
 
 ```
 Path                          Source               Generator
@@ -621,7 +764,7 @@ Path                          Source               Generator
 /benchmarks/                  plots/               static site generator
 ```
 
-### 9.2 Static site generator
+### 10.2 Static site generator
 
 **Tool: custom lightweight build** using a shell/Python pipeline:
 
@@ -630,7 +773,7 @@ Path                          Source               Generator
 2. Templates: plain HTML/CSS/JS — no framework. A single `base.html`
    template with `{{ content }}`, `{{ title }}`, `{{ toc }}` slots.
 3. Syntax highlighting: server-side via `pygments` (Monokai-derived theme
-   matching §2.2 tokens) or a build-time `highlight.js` pass.
+   matching §3.2 tokens) or a build-time `highlight.js` pass.
 4. Output: flat `_site/` directory, ready for GitHub Pages.
 
 Why not Hugo/Jekyll/Docusaurus: the design is custom enough that a
@@ -638,7 +781,7 @@ framework's opinions would fight it. The site has ~20 pages, not 2000.
 A 200-line Python build script is simpler than configuring around a
 framework's layout system.
 
-### 9.3 Doxygen integration
+### 10.3 Doxygen integration
 
 Doxygen generates **XML output** (not HTML). A post-processing step
 transforms doxygen XML into pages that match the site's design:
@@ -655,7 +798,7 @@ Pipeline:
       │  - Reads XML, extracts: classes, structs, functions, enums,
       │    namespaces, briefs, detailed docs, member lists, source refs.
       │  - Renders into the site's base.html template.
-      │  - Generates API cards per §5.4.
+      │  - Generates API cards per §6.4.
       │  - Builds the sidebar nav tree for the API section.
       │
       ▼
@@ -691,9 +834,9 @@ This approach means:
 
 ---
 
-## 10. Build & Deploy Pipeline
+## 11. Build & Deploy Pipeline
 
-### 10.1 GitHub Actions workflow
+### 11.1 GitHub Actions workflow
 
 ```yaml
 # .github/workflows/pages.yml
@@ -748,7 +891,7 @@ jobs:
         uses: actions/deploy-pages@v4
 ```
 
-### 10.2 Directory structure (new files)
+### 11.2 Directory structure (new files)
 
 ```
 site/
@@ -762,7 +905,7 @@ site/
 │   └── landing.html          # Landing page template (hero, sections)
 ├── static/
 │   ├── css/
-│   │   ├── tokens.css        # CSS custom properties (§2, §3, §4)
+│   │   ├── tokens.css        # CSS custom properties (§3, §4, §5)
 │   │   ├── base.css          # Reset, typography, global styles
 │   │   ├── layout.css        # Grid, sidebar, responsive breakpoints
 │   │   ├── components.css    # Code blocks, callouts, cards, tables
@@ -793,7 +936,7 @@ site/
 └── _site/                    # Build output (gitignored)
 ```
 
-### 10.3 What gets committed vs. generated
+### 11.3 What gets committed vs. generated
 
 **Committed** (tracked in git):
 - `site/` directory (templates, CSS, JS, fonts, content, build script,
@@ -806,7 +949,7 @@ site/
 
 ---
 
-## 11. Accessibility
+## 12. Accessibility
 
 - **Color contrast**: all text/background pairs meet WCAG AA minimum.
   Primary text exceeds AAA.
@@ -826,7 +969,7 @@ site/
 
 ---
 
-## 12. Performance Budget
+## 13. Performance Budget
 
 ```
 Metric              Target        Rationale
@@ -847,7 +990,7 @@ The hero canvas JS is loaded with `defer` and only initializes after
 
 ---
 
-## 13. Browser Support
+## 14. Browser Support
 
 Target: last 2 versions of Chrome, Firefox, Safari, Edge. No IE.
 
@@ -860,14 +1003,14 @@ CSS features used that require this baseline:
 
 ---
 
-## 14. Design Tokens Summary (CSS Custom Properties)
+## 15. Design Tokens Summary (CSS Custom Properties)
 
 All tokens defined in `site/static/css/tokens.css` as a single source
 of truth. Components reference tokens, never raw values.
 
 ```css
 :root {
-  /* Colors — §2 */
+  /* Colors — §3 */
   --bg-primary: #07070D;
   --bg-elevated: #0F0F1A;
   --bg-surface: #161625;
@@ -889,7 +1032,7 @@ of truth. Components reference tokens, never raw values.
   --warning: #F59E0B;
   --error: #EF4444;
 
-  /* Typography — §3 */
+  /* Typography — §4 */
   --font-code: 'JetBrains Mono', 'Fira Code', monospace;
   --font-heading: 'Space Grotesk', 'Inter', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -903,7 +1046,7 @@ of truth. Components reference tokens, never raw values.
   --text-3xl: 2.441rem;
   --text-4xl: 3.052rem;
 
-  /* Spacing — §4.3 */
+  /* Spacing — §5.3 */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -914,7 +1057,7 @@ of truth. Components reference tokens, never raw values.
   --space-8: 64px;
   --space-9: 96px;
 
-  /* Motion — §8.4 */
+  /* Motion — §9.4 */
   --duration-fast: 100ms;
   --duration-normal: 200ms;
   --duration-slow: 400ms;
@@ -922,7 +1065,7 @@ of truth. Components reference tokens, never raw values.
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Layout — §4.1 */
+  /* Layout — §5.1 */
   --sidebar-width: 240px;
   --toc-width: 200px;
   --content-max: 720px;
@@ -932,10 +1075,10 @@ of truth. Components reference tokens, never raw values.
 
 ---
 
-## 15. Implementation Order
+## 16. Implementation Order
 
 Phase 1 — **Foundation** (scaffold + tokens + landing page):
-1. Create `site/` directory structure per §10.2.
+1. Create `site/` directory structure per §11.2.
 2. Implement CSS tokens (`tokens.css`).
 3. Build `base.html` template with nav, sidebar shell, footer.
 4. Build landing page (`landing.html` + `hero-canvas.js`).
@@ -955,7 +1098,7 @@ Phase 3 — **API reference**:
 
 Phase 4 — **Polish**:
 14. Interactive schedule diagrams (animated SVG).
-15. Performance audit against §12 budget.
+15. Performance audit against §13 budget.
 16. Accessibility audit (keyboard nav, screen reader testing).
 17. Open Graph image, favicon, meta tags.
 18. Final review of all responsive breakpoints.
