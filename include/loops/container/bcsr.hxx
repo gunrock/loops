@@ -70,9 +70,12 @@ struct bcsr_t {
   std::size_t num_block_cols;  ///< ceil(cols / C).
   std::size_t num_blocks;      ///< Stored (non-empty) blocks.
 
-  vector_t<offset_t, space> block_offsets;     ///< Block-row offsets; length num_block_rows + 1.
-  vector_t<index_t, space> block_col_indices;  ///< Block-column indices; length num_blocks.
-  vector_t<value_t, space> values;             ///< Dense block values; length num_blocks * R * C.
+  vector_t<offset_t, space>
+      block_offsets;  ///< Block-row offsets; length num_block_rows + 1.
+  vector_t<index_t, space>
+      block_col_indices;  ///< Block-column indices; length num_blocks.
+  vector_t<value_t, space>
+      values;  ///< Dense block values; length num_blocks * R * C.
 
   bcsr_t()
       : rows(0),
