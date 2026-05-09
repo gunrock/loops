@@ -36,13 +36,13 @@ template <typename index_t,
           typename value_t,
           memory_space_t space = memory_space_t::device>
 struct coo_t {
-  std::size_t rows;
-  std::size_t cols;
-  std::size_t nnzs;
+  std::size_t rows;  ///< Number of rows.
+  std::size_t cols;  ///< Number of columns.
+  std::size_t nnzs;  ///< Number of stored nonzeros.
 
-  vector_t<index_t, space> row_indices;  /// I
-  vector_t<index_t, space> col_indices;  /// J
-  vector_t<value_t, space> values;       /// V
+  vector_t<index_t, space> row_indices;  ///< Row indices (I); length nnzs.
+  vector_t<index_t, space> col_indices;  ///< Column indices (J); length nnzs.
+  vector_t<value_t, space> values;       ///< Nonzero values (V); length nnzs.
 
   /**
    * @brief Construct a new coo object with everything initialized to zero.

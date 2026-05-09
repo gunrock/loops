@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<article>
+  <div class="api-card" style="margin-bottom: var(--space-7);">
+    <div class="api-card-header">
+      <span class="badge">{{ kind }}</span>
+      <span class="api-card-name">{{ name }}</span>
+    </div>
+    <p class="api-card-brief">{{ brief }}</p>
+    {% if detailed %}
+    <p>{{ detailed }}</p>
+    {% endif %}
+    <a href="https://github.com/gunrock/loops/blob/main/{{ file }}" class="api-card-source" target="_blank" rel="noopener">Defined in {{ file }}</a>
+  </div>
+
+  {% if tparams %}
+  <h2>Template Parameters</h2>
+  <table>
+    <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+    <tbody>
+    {% for tp in tparams %}
+    <tr><td><code>{{ tp.name }}</code></td><td>{{ tp.desc }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if members %}
+  <h2>Members</h2>
+  <div class="api-card-members">
+  {% for m in members %}
+    <div class="api-member">
+      <span class="api-member-name">{{ m.name }}</span>
+      <span class="api-member-desc">{{ m.desc }}</span>
+    </div>
+  {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if methods %}
+  <h2>Methods</h2>
+  {% for m in methods %}
+  <div class="code-block">
+    <div class="code-header"><span>{{ m.returns }} {{ m.name }}({{ m.args }})</span></div>
+    <pre><code>{{ m.detail }}</code></pre>
+  </div>
+  {% endfor %}
+  {% endif %}
+</article>
+{% endblock %}

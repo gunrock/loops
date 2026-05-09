@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — loops</title>
+  <meta name="description" content="{{ description | default('A GPU load-balancing framework for irregular parallel computations.') }}">
+  <meta property="og:title" content="{{ title }} — loops">
+  <meta property="og:description" content="{{ description | default('A GPU load-balancing framework for irregular parallel computations.') }}">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <style>
+    @font-face { font-family: 'STIX Two Text'; src: url('/static/fonts/STIXTwoText-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'STIX Two Text'; src: url('/static/fonts/STIXTwoText-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+    @font-face { font-family: 'JetBrains Mono'; src: url('/static/fonts/JetBrainsMono-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'JetBrains Mono'; src: url('/static/fonts/JetBrainsMono-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('/static/fonts/Inter-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Inter'; src: url('/static/fonts/Inter-Medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+  </style>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/syntax.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  {% block body %}
+  <div class="sidebar-overlay"></div>
+  <button class="sidebar-toggle" aria-label="Toggle navigation">
+    <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+  </button>
+  <div class="page-wrapper">
+    <nav class="sidebar" role="navigation" aria-label="Main navigation">
+      <a href="/" class="sidebar-logo">
+        <img src="/static/img/logo.svg" alt="">
+        <span>loops</span>
+      </a>
+      <div class="sidebar-section">
+        <span class="sidebar-section-title">Getting Started</span>
+        <a href="/docs/getting-started/" class="sidebar-link">Quick Start</a>
+        <a href="/docs/build/" class="sidebar-link">Building</a>
+        <a href="/docs/experimentation/" class="sidebar-link">Experimentation</a>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-section-title">Concepts</span>
+        <a href="/docs/concepts/abstraction/" class="sidebar-link">Abstraction</a>
+        <a href="/docs/concepts/schedules/" class="sidebar-link">Schedules</a>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-section-title">API Reference</span>
+        <button class="sidebar-expand" aria-expanded="false">Containers</button>
+        <div class="sidebar-children">
+          <a href="/api/loops/csr_t/" class="sidebar-link sidebar-link--nested">csr_t</a>
+          <a href="/api/loops/coo_t/" class="sidebar-link sidebar-link--nested">coo_t</a>
+          <a href="/api/loops/ell_t/" class="sidebar-link sidebar-link--nested">ell_t</a>
+          <a href="/api/loops/bcsr_t/" class="sidebar-link sidebar-link--nested">bcsr_t</a>
+          <a href="/api/loops/dia_t/" class="sidebar-link sidebar-link--nested">dia_t</a>
+        </div>
+        <button class="sidebar-expand" aria-expanded="false">Layouts</button>
+        <div class="sidebar-children">
+          <a href="/api/loops/layout/csr/" class="sidebar-link sidebar-link--nested">layout::csr</a>
+          <a href="/api/loops/layout/csc/" class="sidebar-link sidebar-link--nested">layout::csc</a>
+          <a href="/api/loops/layout/coo/" class="sidebar-link sidebar-link--nested">layout::coo</a>
+          <a href="/api/loops/layout/ell/" class="sidebar-link sidebar-link--nested">layout::ell</a>
+          <a href="/api/loops/layout/dia/" class="sidebar-link sidebar-link--nested">layout::dia</a>
+          <a href="/api/loops/layout/bcsr/" class="sidebar-link sidebar-link--nested">layout::bcsr</a>
+        </div>
+        <button class="sidebar-expand" aria-expanded="false">Schedules</button>
+        <div class="sidebar-children">
+          <a href="/api/loops/schedule/setup/" class="sidebar-link sidebar-link--nested">schedule::setup</a>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-section-title">Resources</span>
+        <a href="/docs/datasets/" class="sidebar-link">Datasets</a>
+        <a href="/docs/reproducing-results/" class="sidebar-link">Reproducing Results</a>
+      </div>
+      <hr class="sidebar-divider">
+      <a href="https://github.com/gunrock/loops" class="sidebar-link external-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://doi.org/10.1145/3572848.3577434" class="sidebar-link external-link" target="_blank" rel="noopener">Paper (DOI)</a>
+    </nav>
+    <div class="content-area">
+      <main id="main-content" class="main-content">
+        {% block content %}{% endblock %}
+      </main>
+      {% if toc_items %}
+      <aside class="toc" role="complementary" aria-label="On this page">
+        <div class="toc-title">On this page</div>
+        {% for item in toc_items %}
+        <a href="#{{ item.id }}" class="toc-link">{{ item.text }}</a>
+        {% endfor %}
+      </aside>
+      {% endif %}
+    </div>
+    <footer class="footer">
+      Apache-2.0 &middot; UC Davis &middot; <a href="https://github.com/gunrock">Gunrock</a> &middot; <a href="https://github.com/gunrock/loops">GitHub</a>
+    </footer>
+  </div>
+  {% endblock %}
+  <script src="/static/js/sidebar.js" defer></script>
+  <script src="/static/js/copy-code.js" defer></script>
+  <script src="/static/js/toc.js" defer></script>
+  <script src="/static/js/tabs.js" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

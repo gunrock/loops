@@ -67,14 +67,14 @@ template <typename index_t,
           typename value_t,
           memory_space_t space = memory_space_t::device>
 struct dia_t {
-  std::size_t rows;
-  std::size_t cols;
-  std::size_t nnzs;           /// Original (non-padded) nonzero count.
-  std::size_t stride;         /// Length of each stored diagonal (rows).
-  std::size_t num_diagonals;  /// Distinct (r - c) values stored.
+  std::size_t rows;            ///< Number of rows.
+  std::size_t cols;            ///< Number of columns.
+  std::size_t nnzs;            ///< Original (non-padded) nonzero count.
+  std::size_t stride;          ///< Length of each stored diagonal (rows).
+  std::size_t num_diagonals;   ///< Distinct (r - c) values stored.
 
-  vector_t<index_t, space> diag_offsets;  /// length num_diagonals.
-  vector_t<value_t, space> values;  /// num_diagonals * stride, column-major.
+  vector_t<index_t, space> diag_offsets;  ///< Diagonal offsets; length num_diagonals.
+  vector_t<value_t, space> values;        ///< Diagonal values; num_diagonals * stride, column-major.
 
   dia_t()
       : rows(0),
