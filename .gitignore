@@ -37,6 +37,10 @@ eval/
 # Ignore build directory
 build
 
+# Site build artifacts
+_site/
+_doxygen/
+
 # Ignore external fetched content
 externals/*
 
