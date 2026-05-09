@@ -6,7 +6,6 @@ on:
     paths:
       - 'site/**'
       - 'include/**'
-      - 'docs/**'
       - '.github/workflows/site.yml'
   workflow_dispatch:
 

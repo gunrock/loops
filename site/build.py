@@ -3,7 +3,7 @@
 
 Assembles the static site from:
   - Jinja2 templates (site/templates/)
-  - Markdown content (site/content/ and docs/)
+  - Markdown content (site/content/)
   - Doxygen XML output (build/doxygen-xml/)
   - Static assets (site/static/)
 
@@ -28,7 +28,6 @@ OUT = ROOT / "_site"
 TEMPLATES = SITE / "templates"
 CONTENT = SITE / "content"
 STATIC = SITE / "static"
-DOCS = ROOT / "docs"
 DOXYGEN_XML = ROOT / "_doxygen" / "xml"
 
 BASE_URL = os.environ.get("BASE_URL", "/loops").rstrip("/")
@@ -99,22 +98,9 @@ def wrap_code_blocks(html):
 def build_markdown_pages(env):
     pages = []
 
-    # Site content
     for md_file in sorted(CONTENT.rglob("*.md")):
         rel = md_file.relative_to(CONTENT)
         pages.append((md_file, rel))
-
-    # Existing docs
-    doc_map = {
-        "build.md": Path("build.md"),
-        "experimentation.md": Path("experimentation.md"),
-        "datasets.md": Path("datasets.md"),
-        "reproducing-results.md": Path("reproducing-results.md"),
-    }
-    for filename, rel in doc_map.items():
-        src = DOCS / filename
-        if src.exists():
-            pages.append((src, rel))
 
     template = env.get_template("page.html")
 
@@ -123,12 +109,9 @@ def build_markdown_pages(env):
         meta, body = parse_frontmatter(text)
         html, toc_items = render_markdown(body)
 
-        # Determine output path
         stem = rel.stem
         if "concepts" in str(rel):
             out_dir = OUT / "docs" / "concepts" / stem
-        elif src.parent == DOCS:
-            out_dir = OUT / "docs" / stem
         else:
             out_dir = OUT / "docs" / stem
 

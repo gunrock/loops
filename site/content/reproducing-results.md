@@ -1,4 +1,7 @@
-[README](/README.md) > **Reproducing Results**
+---
+title: Reproducing Results
+description: Re-running the paper's full experiment sweep and regenerating plots.
+---
 
 # Reproducing Results
 

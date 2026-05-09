@@ -1,4 +1,7 @@
-[README](/README.md) > **Datasets**
+---
+title: Datasets
+description: How to fetch and prepare the SuiteSparse Matrix Collection for benchmarking.
+---
 
 # Datasets
 
