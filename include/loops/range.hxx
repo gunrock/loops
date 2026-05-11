@@ -207,8 +207,7 @@ struct has_size {
 
 template <typename C,
           typename = typename std::enable_if<traits::has_size<C>::value>>
-__host__ __device__ auto indices(C const& cont)
-    -> range_proxy<decltype(cont.size())> {
+__host__ auto indices(C const& cont) -> range_proxy<decltype(cont.size())> {
   return {0, cont.size()};
 }
 
