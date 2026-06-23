@@ -116,7 +116,8 @@
     {
       "name": "ci-multi-arch",
       "configurePreset": "ci-multi-arch",
-      "jobs": 0
+      "description": "Parallelism capped at 2: hosted CI runners (~16 GB) OOM if every Thrust/CUB-heavy nvcc/cicc runs at once across the f32/f64 x multi-arch target set.",
+      "jobs": 2
     }
   ],
   "testPresets": [
