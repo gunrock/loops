@@ -46,3 +46,6 @@ externals/*
 
 # Ignore checkpoints ipynb
 */*.ipynb_checkpoints/*
+
+# Ignore reports
+reports/
