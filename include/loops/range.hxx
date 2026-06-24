@@ -209,8 +209,7 @@ struct has_size {
 // function, so this overload cannot legally run on device. Restricting it to
 // __host__ avoids nvcc warning #20014-D. The C-array and initializer_list
 // overloads below stay __host__ __device__ because they are device-safe.
-template <typename C,
-          typename = std::enable_if_t<traits::has_size<C>::value>>
+template <typename C, typename = std::enable_if_t<traits::has_size<C>::value>>
 __host__ auto indices(C const& cont) -> range_proxy<decltype(cont.size())> {
   return {0, cont.size()};
 }
