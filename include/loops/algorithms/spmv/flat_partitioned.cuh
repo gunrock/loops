@@ -35,7 +35,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
-#include <loops/util/arch.hxx>
+#include <loops/algorithms/spmv/launch_box.hxx>
 #include <loops/util/timer.hxx>
 #include <loops/memory.hxx>
 
@@ -89,7 +89,7 @@ util::timer_t flat_partitioned(csr_t<index_t, offset_t, type_t>& csr,
   lay_t partitioned(base);
   setup_t config(partitioned);
 
-  constexpr std::size_t block_size = arch::target_spmv_traits().block_size;
+  constexpr std::size_t block_size = launch_t<type_t>::block_size;
   std::size_t grid_size = math::ceil_div(
       static_cast<std::size_t>(partitioned.num_tiles()), block_size);
 
