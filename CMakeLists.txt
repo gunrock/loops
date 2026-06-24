@@ -79,6 +79,18 @@ target_compile_definitions(loops
     LOOPS_VERSION_PATCH=${PROJECT_VERSION_PATCH}
 )
 
+# Bake the primary target arch into the kernels so the compile-time launch
+# params (block size, items-per-thread in util/arch.hxx) match the GPU. A
+# single-arch preset (release-a100 -> 80, release-h100 -> 90) pins it exactly;
+# multi-arch / native builds leave it to the Ampere baseline and rely on the
+# run-time grid sizing to adapt.
+list(LENGTH CMAKE_CUDA_ARCHITECTURES _loops_arch_count)
+if(_loops_arch_count EQUAL 1 AND CMAKE_CUDA_ARCHITECTURES MATCHES "^[0-9]+$")
+  target_compile_definitions(loops
+    INTERFACE LOOPS_TARGET_ARCH=${CMAKE_CUDA_ARCHITECTURES})
+  message(STATUS "Loops compile-time SpMV tuning: sm_${CMAKE_CUDA_ARCHITECTURES}")
+endif()
+
 target_include_directories(loops
   INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
