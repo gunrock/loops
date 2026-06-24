@@ -22,8 +22,6 @@
 #include <loops/memory.hxx>
 #include <iostream>
 
-#include <cub/block/block_scan.cuh>
-
 namespace loops {
 namespace algorithms {
 namespace spmv {

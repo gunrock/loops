@@ -25,8 +25,6 @@
 #include <loops/util/timer.hxx>
 #include <loops/memory.hxx>
 
-#include <cub/block/block_scan.cuh>
-
 namespace loops {
 namespace algorithms {
 namespace spmv {
