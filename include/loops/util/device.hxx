@@ -39,10 +39,10 @@ namespace detail {
 /**
  * @brief Memoized @c cudaGetDeviceProperties, one query per (process, device).
  *
- * @c cudaGetDeviceProperties is a ~1 ms driver call; querying it inside a
- * timed launch path used to dominate the small-matrix runtime. We cache the
- * @c cudaDeviceProp per ordinal so callers pay the driver cost once. Host-only
- * and assumes the single-threaded launch path the schedules use.
+ * @c cudaGetDeviceProperties is a ~1 ms driver call, heavy enough to dominate
+ * small-matrix runtime if hit on a timed launch path. Caching the
+ * @c cudaDeviceProp per ordinal lets callers pay the driver cost once.
+ * Host-only and assumes the single-threaded launch path the schedules use.
  */
 inline const cudaDeviceProp& cached_properties(device_id_t ordinal) {
   constexpr int max_devices = 16;
@@ -82,11 +82,10 @@ struct properties_t {
 /**
  * @brief SM (processor) count, memoized.
  *
- * Uses @c cudaDeviceGetAttribute (one value, ~microseconds) rather than the
- * full @c cudaGetDeviceProperties (~1 ms). This matters even with the props
- * cache above: in a single-shot timed launch the first, un-warmed full query
- * would still land inside the timed region, so the launch path must take the
- * cheap attribute road instead.
+ * Uses @c cudaDeviceGetAttribute (one value, ~microseconds), keeping the launch
+ * path clear of the ~1 ms @c cudaGetDeviceProperties query -- including the
+ * first, un-warmed call that a single-shot timed launch cannot hide behind a
+ * struct cache.
  */
 inline int multi_processor_count(device_id_t ordinal = device::get()) {
   constexpr int max_devices = 16;

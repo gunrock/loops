@@ -96,8 +96,8 @@ struct spmv_traits_t {
  * @brief SpMV defaults for a given architecture identity.
  *
  * Unknown or newer-than-known archs fall through to the closest documented
- * generation at or below @c id.generation (Ampere as the modern baseline), so
- * a brand-new chip launches sensibly instead of with Volta-era constants.
+ * generation at or below @c id.generation, with Ampere as the floor, so a
+ * brand-new chip still gets a sensible modern default.
  */
 constexpr spmv_traits_t spmv_traits(id_t id) {
   // AMD slot: when wired, branch on `id.vendor == vendor_t::amd` here and
@@ -154,8 +154,8 @@ constexpr std::size_t target_items_per_thread() {
 /**
  * @brief Run-time identity of the active device.
  *
- * Reads the cached @c cudaDeviceProp (memoized in device.hxx), so this never
- * hits the ~1 ms driver query on a timed path.
+ * Backed by the cheap memoized attribute query in device.hxx, so it stays off
+ * the ~1 ms full-properties path even on a timed launch.
  */
 inline id_t current_id() {
   return id_t{vendor_t::nvidia, device::compute_capability()};
@@ -171,8 +171,8 @@ inline int processor_count() {
  *
  * Returns (max resident blocks per SM, as the occupancy API reports for *this*
  * compiled kernel) * SM count. Grid-stride / persistent kernels (e.g.
- * work_oriented) use it to fill the device and scale with arch, replacing the
- * old fixed @c 2*SM under-subscription.
+ * work_oriented) use it to fill the device in a single wave that scales with
+ * both the kernel's occupancy and the SM count.
  *
  * @tparam kernel_t Kernel function-pointer type.
  * @param kernel              Kernel the grid will launch.
