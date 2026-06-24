@@ -209,10 +209,18 @@ set(LOOPS_HIP_RELEASE_FLAGS
   -ffast-math
 )
 
+# HIP marks its runtime functions warn_unused_result; the fire-and-forget xpu
+# wrappers (stream_synchronize, memcpy, ...) intentionally drop the status the
+# CUDA path also ignores, so quiet that one diagnostic on the AMD compiler.
+set(LOOPS_HIP_FLAGS
+  -Wno-unused-result
+)
+
 target_compile_options(loops INTERFACE
   $<$<COMPILE_LANGUAGE:CXX>:${LOOPS_HOST_WARNINGS}>
   $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:${LOOPS_CUDA_DEBUG_FLAGS}>
   $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<NOT:$<CONFIG:Debug>>>:${LOOPS_CUDA_RELEASE_FLAGS}>
+  $<$<COMPILE_LANGUAGE:HIP>:${LOOPS_HIP_FLAGS}>
   $<$<AND:$<COMPILE_LANGUAGE:HIP>,$<NOT:$<CONFIG:Debug>>>:${LOOPS_HIP_RELEASE_FLAGS}>
 )
 

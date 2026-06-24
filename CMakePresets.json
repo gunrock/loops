@@ -80,6 +80,39 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CUDA_ARCHITECTURES": "80;90"
       }
+    },
+    {
+      "name": "hip-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LOOPS_BACKEND": "HIP"
+      }
+    },
+    {
+      "name": "release-mi210",
+      "displayName": "Release / gfx90a only (MI210 / MI250, CDNA2)",
+      "inherits": "hip-base",
+      "cacheVariables": {
+        "CMAKE_HIP_ARCHITECTURES": "gfx90a"
+      }
+    },
+    {
+      "name": "release-mi300x",
+      "displayName": "Release / gfx942 only (MI300X / MI300A / MI325X, CDNA3)",
+      "inherits": "hip-base",
+      "cacheVariables": {
+        "CMAKE_HIP_ARCHITECTURES": "gfx942"
+      }
+    },
+    {
+      "name": "release-mi350x",
+      "displayName": "Release / gfx950 only (MI350X, CDNA4)",
+      "inherits": "hip-base",
+      "cacheVariables": {
+        "CMAKE_HIP_ARCHITECTURES": "gfx950"
+      }
     }
   ],
   "buildPresets": [
@@ -118,6 +151,21 @@
       "configurePreset": "ci-multi-arch",
       "description": "Parallelism capped at 2: hosted CI runners (~16 GB) OOM if every Thrust/CUB-heavy nvcc/cicc runs at once across the f32/f64 x multi-arch target set.",
       "jobs": 2
+    },
+    {
+      "name": "release-mi210",
+      "configurePreset": "release-mi210",
+      "jobs": 0
+    },
+    {
+      "name": "release-mi300x",
+      "configurePreset": "release-mi300x",
+      "jobs": 0
+    },
+    {
+      "name": "release-mi350x",
+      "configurePreset": "release-mi350x",
+      "jobs": 0
     }
   ],
   "testPresets": [
