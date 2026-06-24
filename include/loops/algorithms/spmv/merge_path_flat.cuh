@@ -17,7 +17,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
-#include <loops/util/arch.hxx>
+#include <loops/algorithms/spmv/launch_box.hxx>
 #include <loops/util/timer.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
@@ -100,9 +100,8 @@ util::timer_t merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
                               vector_t<type_t>& x,
                               vector_t<type_t>& y,
                               cudaStream_t stream = 0) {
-  constexpr std::size_t block_size = arch::target_spmv_traits().block_size;
-  constexpr std::size_t items_per_thread =
-      arch::target_items_per_thread<type_t>();
+  constexpr std::size_t block_size = launch_t<type_t>::block_size;
+  constexpr std::size_t items_per_thread = launch_t<type_t>::items_per_thread;
 
   using preprocessor_t =
       schedule::merge_path::preprocess_t<block_size, items_per_thread, index_t,

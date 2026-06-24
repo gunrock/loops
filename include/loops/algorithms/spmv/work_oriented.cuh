@@ -16,7 +16,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
-#include <loops/util/arch.hxx>
+#include <loops/algorithms/spmv/launch_box.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
 
@@ -94,13 +94,13 @@ void work_oriented(csr_t<index_t, offset_t, type_t>& csr,
                    vector_t<type_t>& x,
                    vector_t<type_t>& y,
                    cudaStream_t stream = 0) {
-  constexpr std::size_t block_size = arch::target_spmv_traits().block_size;
+  constexpr std::size_t block_size = launch_t<type_t>::block_size;
 
   /// Each thread strides over an even share of the (rows + nnz) work, so one
   /// full-occupancy wave saturates the device: size the grid to the compiled
   /// kernel's resident-block count times the SM count.
   auto kernel = __work_oriented<block_size, index_t, offset_t, type_t>;
-  std::size_t grid_size = arch::occupancy_grid(kernel, block_size);
+  std::size_t grid_size = launch_box::occupancy_grid(kernel, block_size);
 
   launch::non_cooperative(stream, kernel, grid_size, block_size, csr.rows,
                           csr.cols, csr.nnzs, csr.offsets.data().get(),
