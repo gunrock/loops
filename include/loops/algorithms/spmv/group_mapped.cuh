@@ -16,6 +16,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
+#include <loops/util/arch.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
 
@@ -27,7 +28,7 @@ template <std::size_t threads_per_block,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void __launch_bounds__(threads_per_block, 2)
+__global__ void __launch_bounds__(threads_per_block)
     __group_mapped(std::size_t rows,
                    std::size_t cols,
                    std::size_t nnz,
@@ -75,8 +76,7 @@ void group_mapped(csr_t<index_t, offset_t, type_t>& csr,
                   vector_t<type_t>& x,
                   vector_t<type_t>& y,
                   cudaStream_t stream = 0) {
-  // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  constexpr std::size_t block_size = arch::target_spmv_traits().block_size;
 
   /// Set-up kernel launch parameters and run the kernel.
 
