@@ -52,13 +52,23 @@ __global__ void __launch_bounds__(threads_per_block)
   setup_t config(offsets, rows, nnz);
   auto map = config.init();
 
-  /// Accumulate the complete tiles.
+  /// Accumulate the complete tiles. A thread's first row may continue a row
+  /// that opens in the previous partition, whose head is emitted there as a
+  /// remainder atomic, so fold the first row in atomically as well; rows that
+  /// fall wholly within this partition are owned outright and written directly.
   type_t sum = 0;
+  bool first_tile = true;
   for (auto row : config.tiles(map)) {
     for (auto nz : config.atoms(row, map)) {
       sum += values[nz] * x[indices[nz]];
     }
-    y[row] = sum;
+    if (first_tile) {
+      if (sum != 0)
+        atomicAdd(&(y[row]), sum);
+      first_tile = false;
+    } else {
+      y[row] = sum;
+    }
     sum = 0;
   }
 
