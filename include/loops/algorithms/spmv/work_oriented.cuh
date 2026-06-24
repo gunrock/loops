@@ -96,11 +96,9 @@ void work_oriented(csr_t<index_t, offset_t, type_t>& csr,
                    cudaStream_t stream = 0) {
   constexpr std::size_t block_size = arch::target_spmv_traits().block_size;
 
-  /// Work-oriented is grid-stride over an even-share of the (rows + nnz) work,
-  /// so the grid just needs to fill the device once: a full-occupancy wave
-  /// scaled to the actual SM count (occupancy API on the compiled kernel),
-  /// instead of the old fixed `2 x SM` that left most of the machine idle and
-  /// never scaled with the matrix or the arch.
+  /// Each thread strides over an even share of the (rows + nnz) work, so one
+  /// full-occupancy wave saturates the device: size the grid to the compiled
+  /// kernel's resident-block count times the SM count.
   auto kernel = __work_oriented<block_size, index_t, offset_t, type_t>;
   std::size_t grid_size = arch::occupancy_grid(kernel, block_size);
 
