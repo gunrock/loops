@@ -101,3 +101,96 @@ jobs:
       - name: Build
         # Cap parallelism (-j 2) for the same OOM reason as the Linux job.
         run: cmake --build build --config Release -j 2
+
+  backend-parity:
+    name: backend parity (xpu surface)
+    if: "!contains(github.event.head_commit.message, '[skip build]')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Diff loops::xpu symbols across backend/{cuda,hip}.hxx
+        # The two backend files hand-mirror the same loops::xpu surface; a symbol
+        # added to one and forgotten in the other only fails when that backend is
+        # compiled. Diff the declared names (using / inline constexpr / inline fn)
+        # so the gap is caught in milliseconds, no toolchain required.
+        run: |
+          python3 - <<'PY'
+          import re, sys
+
+          def symbols(path):
+              text = open(path).read()
+              s = set()
+              s |= set(re.findall(r'^\s*using\s+(\w+)\s*=', text, re.M))
+              s |= set(re.findall(r'^\s*inline\s+constexpr\s+\w+\s+(\w+)\s*=', text, re.M))
+              s |= set(re.findall(r'^\s*inline\b.*?(\w+)\s*\(', text, re.M))
+              return s
+
+          cuda = symbols('include/loops/backend/cuda.hxx')
+          hip = symbols('include/loops/backend/hip.hxx')
+          only_cuda = sorted(cuda - hip)
+          only_hip = sorted(hip - cuda)
+          if only_cuda or only_hip:
+              print('loops::xpu surface mismatch between backend/cuda.hxx and backend/hip.hxx:')
+              if only_cuda:
+                  print('  only in cuda.hxx:', ', '.join(only_cuda))
+              if only_hip:
+                  print('  only in hip.hxx :', ', '.join(only_hip))
+              sys.exit(1)
+          print('loops::xpu surface matches across backends (%d symbols).' % len(cuda))
+          PY
+
+  hip:
+    name: linux / hip / rocm-7.2.4 / ${{ matrix.gfx }}
+    if: "!contains(github.event.head_commit.message, '[skip build]')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    # ROCm 7.2.4 (latest at time of writing). The `-complete` image bundles the
+    # math stack (rocThrust / rocPRIM) the HIP backend links against. No GPU at
+    # the runner: building objects for --offload-arch=gfxXXX is offline-only, so
+    # the binaries are compiled but never run.
+    container:
+      image: rocm/dev-ubuntu-24.04:7.2.4-complete
+    env:
+      # Point find_package(hip/rocprim/rocthrust) at the ROCm install; the image
+      # ships them under /opt/rocm but does not put it on the default prefix path.
+      CMAKE_PREFIX_PATH: /opt/rocm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - gfx: gfx90a   # MI210 / MI250 (CDNA2)
+            preset: release-mi210
+          - gfx: gfx942   # MI300X / MI300A / MI325X (CDNA3)
+            preset: release-mi300x
+          - gfx: gfx950   # MI350X (CDNA4)
+            preset: release-mi350x
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: hipcc --version
+        run: hipcc --version
+
+      - name: Install build tools (cmake, git)
+        # The ROCm image ships neither a recent CMake (preset schema v6 +
+        # enable_language(HIP)) nor git (cxxopts is fetched via git clone),
+        # which the hosted ubuntu runners have by default. Add both.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip git ca-certificates
+          pip3 install --break-system-packages --no-cache-dir 'cmake>=3.28'
+          cmake --version
+
+      - name: 'Configure (preset: ${{ matrix.preset }})'
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build (compile-only, no GPU at runner)
+        # Cap -j 2 for the same OOM reason as the CUDA jobs (rocThrust-heavy
+        # hipcc). group_mapped is HIP-excluded (cooperative-groups), so the
+        # target set is the rest of the SpMV examples.
+        run: cmake --build build/${{ matrix.preset }} -j 2
+
+      - name: List built binaries
+        run: ls -la build/${{ matrix.preset }}/bin/
