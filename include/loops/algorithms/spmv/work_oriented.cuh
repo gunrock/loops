@@ -16,6 +16,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
+#include <loops/algorithms/spmv/launch_box.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
 
@@ -35,7 +36,7 @@ template <std::size_t threads_per_block,
           typename index_t,
           typename offset_t,
           typename type_t>
-__global__ void __launch_bounds__(threads_per_block, 2)
+__global__ void __launch_bounds__(threads_per_block)
     __work_oriented(std::size_t rows,
                     std::size_t cols,
                     std::size_t nnz,
@@ -93,21 +94,18 @@ void work_oriented(csr_t<index_t, offset_t, type_t>& csr,
                    vector_t<type_t>& x,
                    vector_t<type_t>& y,
                    cudaStream_t stream = 0) {
-  // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  constexpr std::size_t block_size = launch_t<type_t>::block_size;
 
-  /// Set-up kernel launch parameters and run the kernel.
+  /// Each thread strides over an even share of the (rows + nnz) work, so one
+  /// full-occupancy wave saturates the device: size the grid to the compiled
+  /// kernel's resident-block count times the SM count.
+  auto kernel = __work_oriented<block_size, index_t, offset_t, type_t>;
+  std::size_t grid_size = launch_box::occupancy_grid(kernel, block_size);
 
-  /// Launch 2 x (SM Count) number of blocks.
-  /// Weirdly enough, a really high number here might cause it to fail.
-  loops::device::properties_t props;
-  std::size_t grid_size = 2 * props.multi_processor_count();
-
-  launch::non_cooperative(
-      stream, __work_oriented<block_size, index_t, offset_t, type_t>, grid_size,
-      block_size, csr.rows, csr.cols, csr.nnzs, csr.offsets.data().get(),
-      csr.indices.data().get(), csr.values.data().get(), x.data().get(),
-      y.data().get());
+  launch::non_cooperative(stream, kernel, grid_size, block_size, csr.rows,
+                          csr.cols, csr.nnzs, csr.offsets.data().get(),
+                          csr.indices.data().get(), csr.values.data().get(),
+                          x.data().get(), y.data().get());
 
   cudaStreamSynchronize(stream);
 }

@@ -16,6 +16,7 @@
 #include <loops/container/vector.hxx>
 #include <loops/util/launch.hxx>
 #include <loops/util/device.hxx>
+#include <loops/algorithms/spmv/launch_box.hxx>
 #include <loops/memory.hxx>
 #include <iostream>
 
@@ -70,8 +71,7 @@ void thread_mapped(csr_t<index_t, offset_t, type_t>& csr,
                    vector_t<type_t>& x,
                    vector_t<type_t>& y,
                    cudaStream_t stream = 0) {
-  // Create a schedule.
-  constexpr std::size_t block_size = 128;
+  constexpr std::size_t block_size = launch_t<type_t>::block_size;
 
   /// Set-up kernel launch parameters and run the kernel.
 
