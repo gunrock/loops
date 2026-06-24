@@ -17,7 +17,7 @@ jobs:
     name: linux / ubuntu-${{ matrix.os }} / cuda-${{ matrix.cuda }}
     if: "!contains(github.event.head_commit.message, '[skip build]')"
     runs-on: ubuntu-${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -50,7 +50,11 @@ jobs:
         run: cmake --preset ci-multi-arch
 
       - name: Build
-        run: cmake --build --preset ci-multi-arch -j
+        # Parallelism is capped via the preset's "jobs": 2 (not a bare -j):
+        # unbounded make -j OOM-kills the ~16 GB runner because every
+        # Thrust/CUB-heavy nvcc/cicc spawns at once across the f32/f64 x
+        # multi-arch target set.
+        run: cmake --build --preset ci-multi-arch
 
       - name: List built binaries
         run: ls -la build/ci-multi-arch/bin/
@@ -95,4 +99,5 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES="80;90"
 
       - name: Build
-        run: cmake --build build --config Release -j
+        # Cap parallelism (-j 2) for the same OOM reason as the Linux job.
+        run: cmake --build build --config Release -j 2
