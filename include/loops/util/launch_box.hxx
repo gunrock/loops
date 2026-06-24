@@ -42,7 +42,8 @@ namespace launch_box {
  *
  * AMD families: CDNA (datacenter Instinct, wavefront 64) -- gfx906 MI50/60,
  * gfx908 MI100, gfx90a MI210/MI250, gfx942 MI300/MI325, gfx950 MI350; RDNA
- * (Radeon, native wave32) -- gfx1030 RDNA2, gfx1100 RDNA3, gfx1200 RDNA4.
+ * (Radeon, native wave32) -- gfx1030 RDNA2, gfx1100 RDNA3, gfx1200/gfx1201
+ * RDNA4. A future-CDNA (e.g. MI400) slot drops in as the next high bit.
  */
 enum sm_flag_t : unsigned int {
   fallback = 1u << 0,
@@ -65,6 +66,7 @@ enum sm_flag_t : unsigned int {
   gfx1030 = 1u << 21,
   gfx1100 = 1u << 22,
   gfx1200 = 1u << 23,
+  gfx1201 = 1u << 24,
 };
 
 constexpr sm_flag_t operator|(sm_flag_t a, sm_flag_t b) {
@@ -122,6 +124,8 @@ constexpr sm_flag_t flag_of_gfx(int gfx) {
       return gfx1100;
     case 0x1200:
       return gfx1200;
+    case 0x1201:
+      return gfx1201;
     default:
       return static_cast<sm_flag_t>(0u);
   }
