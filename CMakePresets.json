@@ -113,6 +113,14 @@
       "cacheVariables": {
         "CMAKE_HIP_ARCHITECTURES": "gfx950"
       }
+    },
+    {
+      "name": "release-rx9070",
+      "displayName": "Release / gfx1201 only (Radeon RX 9070 XT, RDNA4)",
+      "inherits": "hip-base",
+      "cacheVariables": {
+        "CMAKE_HIP_ARCHITECTURES": "gfx1201"
+      }
     }
   ],
   "buildPresets": [
@@ -165,6 +173,11 @@
     {
       "name": "release-mi350x",
       "configurePreset": "release-mi350x",
+      "jobs": 0
+    },
+    {
+      "name": "release-rx9070",
+      "configurePreset": "release-rx9070",
       "jobs": 0
     }
   ],
