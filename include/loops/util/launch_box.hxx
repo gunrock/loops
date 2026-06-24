@@ -26,7 +26,7 @@
 #include <cstddef>
 #include <type_traits>
 
-#include <loops/util/xpu.hxx>
+#include <loops/backend/xpu.hxx>
 #include <loops/util/device.hxx>
 
 namespace loops {

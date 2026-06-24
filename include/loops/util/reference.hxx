@@ -29,7 +29,7 @@
 #include <loops/container/csr.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/memory.hxx>
-#include <loops/util/xpu.hxx>
+#include <loops/backend/xpu.hxx>
 
 #include <thrust/host_vector.h>
 

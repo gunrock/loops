@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 
-#include <loops/util/xpu.hxx>
+#include <loops/backend/xpu.hxx>
 
 namespace loops {
 

@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <loops/util/xpu.hxx>
+#include <loops/backend/xpu.hxx>
 
 namespace loops {
 namespace device {

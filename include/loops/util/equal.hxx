@@ -16,7 +16,7 @@
 #include <iomanip>
 #include <limits>
 
-#include <loops/util/xpu.hxx>
+#include <loops/backend/xpu.hxx>
 
 #include <thrust/host_vector.h>
 
