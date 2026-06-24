@@ -77,7 +77,7 @@ template <typename index_t, typename type_t>
 util::timer_t ell_merge_path(ell_t<index_t, type_t>& ell,
                              vector_t<type_t>& x,
                              vector_t<type_t>& y,
-                             cudaStream_t stream = 0) {
+                             xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using ell_layout_t = layout::ell<tile_id_t, atom_id_t>;
@@ -102,7 +102,8 @@ util::timer_t ell_merge_path(ell_t<index_t, type_t>& ell,
   int num_merge_tiles = math::ceil_div(ell.rows + ell.rows * ell.pitch,
                                        block_size * items_per_thread);
   int device_ordinal = device::get();
-  cudaDeviceGetAttribute(&max_dim_x, cudaDevAttrMaxGridDimX, device_ordinal);
+  xpu::device_get_attribute(&max_dim_x, xpu::attr_max_grid_dim_x,
+                            device_ordinal);
 
   util::timer_t timer;
   timer.start();
@@ -120,7 +121,7 @@ util::timer_t ell_merge_path(ell_t<index_t, type_t>& ell,
                        ell_layout_t, index_t, type_t>,
       grid_size, block_size, meta, lay, ell.indices.data().get(),
       ell.values.data().get(), x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
 
   return timer;

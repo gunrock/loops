@@ -60,7 +60,7 @@ template <typename index_t, typename offset_t, typename type_t>
 void original(csr_t<index_t, offset_t, type_t>& csr,
               vector_t<type_t>& x,
               vector_t<type_t>& y,
-              cudaStream_t stream = 0) {
+              xpu::stream_t stream = 0) {
   // Create a schedule.
   constexpr std::size_t block_size = 128;
 
@@ -72,7 +72,7 @@ void original(csr_t<index_t, offset_t, type_t>& csr,
                           csr.values.data().get(), x.data().get(),
                           y.data().get());
 
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
 }
 
 }  // namespace spmv

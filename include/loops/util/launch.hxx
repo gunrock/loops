@@ -11,7 +11,8 @@
 
 #pragma once
 #include <cstddef>
-#include <cuda.h>
+
+#include <loops/util/xpu.hxx>
 
 namespace loops {
 namespace launch {
@@ -29,7 +30,7 @@ inline void for_each_argument_address(void** collected_addresses,
 }  // namespace detail
 
 template <typename func_t, typename... args_t>
-void cooperative(cudaStream_t stream,
+void cooperative(xpu::stream_t stream,
                  const func_t& kernel,
                  std::size_t number_of_blocks,
                  std::size_t threads_per_block,
@@ -39,7 +40,7 @@ void cooperative(cudaStream_t stream,
   void* argument_ptrs[non_zero_num_params];
   detail::for_each_argument_address(argument_ptrs,
                                     ::std::forward<args_t>(args)...);
-  cudaLaunchCooperativeKernel<func_t>(
+  xpu::launch_cooperative_kernel<func_t>(
       &kernel, number_of_blocks, threads_per_block, argument_ptrs, 0, stream);
 }
 
@@ -64,7 +65,7 @@ void cooperative(cudaStream_t stream,
  * \return void
  */
 template <typename func_t, typename... args_t>
-void non_cooperative(cudaStream_t stream,
+void non_cooperative(xpu::stream_t stream,
                      const func_t& kernel,
                      dim3 number_of_blocks,
                      dim3 threads_per_block,

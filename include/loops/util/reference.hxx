@@ -29,8 +29,7 @@
 #include <loops/container/csr.hxx>
 #include <loops/container/vector.hxx>
 #include <loops/memory.hxx>
-
-#include <cuda_runtime.h>
+#include <loops/util/xpu.hxx>
 
 #include <thrust/host_vector.h>
 
@@ -292,8 +291,8 @@ rigorous_report rigorously_validate_spmv(
       row_l1_products(csr_h, x_h);  // double L1 of products, cast to value_t
 
   thrust::host_vector<value_t> y_gpu(csr_h.rows);
-  cudaMemcpy(y_gpu.data(), d_y_gpu, csr_h.rows * sizeof(value_t),
-             cudaMemcpyDeviceToHost);
+  xpu::memcpy(y_gpu.data(), d_y_gpu, csr_h.rows * sizeof(value_t),
+              xpu::memcpy_device_to_host);
 
   rigorous_report report;
   report.total_rows = csr_h.rows;
@@ -362,7 +361,7 @@ std::size_t count_errors(const value_t* d_y,
                          ne_t ne,
                          bool verbose = false) {
   thrust::host_vector<value_t> y_h(n);
-  cudaMemcpy(y_h.data(), d_y, n * sizeof(value_t), cudaMemcpyDeviceToHost);
+  xpu::memcpy(y_h.data(), d_y, n * sizeof(value_t), xpu::memcpy_device_to_host);
 
   std::size_t errors = 0;
   for (std::size_t i = 0; i < n; ++i) {

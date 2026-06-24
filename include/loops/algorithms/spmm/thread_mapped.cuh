@@ -68,7 +68,7 @@ template <typename index_t, typename offset_t, typename type_t>
 void thread_mapped(csr_t<index_t, offset_t, type_t>& csr,
                    matrix_t<type_t>& B,
                    matrix_t<type_t>& C,
-                   cudaStream_t stream = 0) {
+                   xpu::stream_t stream = 0) {
   // Create a schedule.
   constexpr std::size_t block_size = 128;
 
@@ -86,7 +86,7 @@ void thread_mapped(csr_t<index_t, offset_t, type_t>& csr,
       csr.offsets.data().get(), csr.indices.data().get(),
       csr.values.data().get(), B, C);
 
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
 }
 
 }  // namespace spmm
