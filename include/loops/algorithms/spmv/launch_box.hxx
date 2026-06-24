@@ -22,17 +22,43 @@ namespace spmv {
 /**
  * @brief SpMV launch configuration for the architecture being compiled for.
  *
- * SpMV is bandwidth-bound (~2 flop/nonzero), so 128 threads/block (4 warps)
- * gives enough warps to hide DRAM latency while keeping block occupancy
- * granular. @c items_per_thread sets the merge/work-tile granularity: 8-byte
- * values halve it (each atom moves twice the bytes), and Hopper/Blackwell widen
- * it because their larger L2 keeps @c x resident across more atoms, so a wider
- * tile amortizes the per-thread search. Ampere is the fallback floor.
+ * SpMV is bandwidth-bound (~2 flop/nonzero), so the block size is picked to be
+ * a few scheduler-width units -- enough resident warps/wavefronts to hide DRAM
+ * latency while keeping block occupancy granular -- and @c items_per_thread
+ * sets the merge/work-tile granularity. 8-byte values halve the item count
+ * (each atom moves twice the bytes); architectures with a larger last-level
+ * cache widen it, since @c x stays resident across more atoms and a wider tile
+ * amortizes the per-thread diagonal search.
+ *
+ * @par NVIDIA (warp = 32)
+ * 128 threads/block = 4 warps. Hopper/Blackwell (sm_90/sm_100) widen the tile
+ * over their larger L2; Ampere-and-below is the floor, and @c fallback catches
+ * multi-arch / native CUDA builds.
+ *
+ * @par AMD CDNA (wavefront = 64, Instinct)
+ * 256 threads/block = 4 wavefronts: the wavefront is the 64-wide reduction and
+ * scheduling unit (the warp analog), so block sizes and reduction granularity
+ * are multiples of 64 rather than 32. gfx90a (MI210/MI250, CDNA2) has an 8 MB
+ * L2 and no last-level cache, so it takes the narrower floor tile; gfx942
+ * (MI300/MI325, CDNA3) and gfx950 (MI350, CDNA4) add a large Infinity Cache
+ * (LLC) that keeps @c x hot, so they widen the tile like Hopper. gfx906/gfx908
+ * (MI50/MI100) reuse the CDNA floor. LDS is 64 KB/CU across CDNA, comfortably
+ * covering the per-block merge-path buffer at these sizes.
+ *
+ * @par AMD RDNA (native wave32, Radeon)
+ * 256 threads/block over the native 32-wide wavefront; RDNA pairs CUs into a
+ * WGP and carries a large Infinity Cache, so it takes the wide tile. Set
+ * analytically -- not yet validated on Radeon hardware.
+ *
+ * @note The CDNA/RDNA tiles are reasoned from the ISA/architecture references
+ * (wavefront width, LDS, cache hierarchy), not autotuned; treat them as solid
+ * starting points rather than per-matrix optima.
  *
  * @tparam type_t Value type; selects the 4- vs 8-byte items-per-thread.
  */
 template <typename type_t>
 using launch_t = launch_box::launch_box_t<
+    // NVIDIA.
     launch_box::launch_params_t<launch_box::sm_90 | launch_box::sm_100,
                                 128,
                                 (sizeof(type_t) > 4 ? 4 : 8)>,
@@ -41,6 +67,20 @@ using launch_t = launch_box::launch_box_t<
                                     launch_box::sm_89,
                                 128,
                                 (sizeof(type_t) > 4 ? 4 : 7)>,
+    // AMD CDNA: large-LLC parts (gfx942/gfx950) widen the tile.
+    launch_box::launch_params_t<launch_box::gfx942 | launch_box::gfx950,
+                                256,
+                                (sizeof(type_t) > 4 ? 4 : 8)>,
+    // AMD CDNA floor (gfx90a + older): 8 MB L2, no last-level cache.
+    launch_box::launch_params_t<launch_box::gfx906 | launch_box::gfx908 |
+                                    launch_box::gfx90a,
+                                256,
+                                (sizeof(type_t) > 4 ? 4 : 7)>,
+    // AMD RDNA (analytically set; wave32 + Infinity Cache).
+    launch_box::launch_params_t<launch_box::gfx1030 | launch_box::gfx1100 |
+                                    launch_box::gfx1200,
+                                256,
+                                (sizeof(type_t) > 4 ? 4 : 8)>,
     launch_box::launch_params_t<launch_box::fallback,
                                 128,
                                 (sizeof(type_t) > 4 ? 4 : 7)>>;
