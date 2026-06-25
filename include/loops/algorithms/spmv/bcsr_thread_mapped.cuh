@@ -93,7 +93,7 @@ template <std::size_t R,
 util::timer_t bcsr_thread_mapped(bcsr_t<R, C, index_t, offset_t, type_t>& bcsr,
                                  vector_t<type_t>& x,
                                  vector_t<type_t>& y,
-                                 cudaStream_t stream = 0) {
+                                 xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = offset_t;
   using bcsr_layout_t = layout::bcsr<tile_id_t, atom_id_t>;
@@ -117,7 +117,7 @@ util::timer_t bcsr_thread_mapped(bcsr_t<R, C, index_t, offset_t, type_t>& bcsr,
       stream, __bcsr_thread_mapped<R, C, setup_t, index_t, type_t>, grid_size,
       block_size, config, bcsr.rows, bcsr.block_col_indices.data().get(),
       bcsr.values.data().get(), x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
   return timer;
 }

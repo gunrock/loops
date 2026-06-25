@@ -53,7 +53,7 @@ template <typename index_t, typename type_t>
 void ell_thread_mapped(ell_t<index_t, type_t>& ell,
                        vector_t<type_t>& x,
                        vector_t<type_t>& y,
-                       cudaStream_t stream = 0) {
+                       xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using ell_layout_t = layout::ell<tile_id_t, atom_id_t>;
@@ -72,7 +72,7 @@ void ell_thread_mapped(ell_t<index_t, type_t>& ell,
                           ell.indices.data().get(), ell.values.data().get(),
                           x.data().get(), y.data().get());
 
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
 }
 
 }  // namespace spmv

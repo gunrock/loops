@@ -74,7 +74,7 @@ template <std::size_t K = 8,
 util::timer_t flat_partitioned(csr_t<index_t, offset_t, type_t>& csr,
                                vector_t<type_t>& x,
                                vector_t<type_t>& y,
-                               cudaStream_t stream = 0) {
+                               xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = offset_t;
   using base_layout_t = layout::csr<tile_id_t, atom_id_t>;
@@ -101,7 +101,7 @@ util::timer_t flat_partitioned(csr_t<index_t, offset_t, type_t>& csr,
                           grid_size, block_size, config,
                           csr.indices.data().get(), csr.values.data().get(),
                           x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
   return timer;
 }

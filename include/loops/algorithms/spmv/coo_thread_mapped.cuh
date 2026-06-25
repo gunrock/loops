@@ -60,7 +60,7 @@ template <typename index_t, typename type_t>
 util::timer_t coo_thread_mapped(coo_t<index_t, type_t>& coo,
                                 vector_t<type_t>& x,
                                 vector_t<type_t>& y,
-                                cudaStream_t stream = 0) {
+                                xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = index_t;
   using coo_layout_t = layout::coo<tile_id_t, atom_id_t>;
@@ -83,7 +83,7 @@ util::timer_t coo_thread_mapped(coo_t<index_t, type_t>& coo,
                           coo.row_indices.data().get(),
                           coo.col_indices.data().get(), coo.values.data().get(),
                           x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
   return timer;
 }

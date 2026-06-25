@@ -12,8 +12,10 @@
  * unmatched; a box with neither a match nor a fallback is ill-formed.
  *
  * The flag space is vendor-neutral: NVIDIA @c sm_* bits occupy the low range
- * and the remainder is reserved for AMD @c gfx ISAs, so a HIP build adds flags
- * rather than a parallel mechanism.
+ * and the high range carries AMD @c gfx ISAs, so a HIP build adds flags rather
+ * than a parallel mechanism. CUDA builds key the match off @c LOOPS_TARGET_ARCH
+ * (compute capability), HIP builds off @c LOOPS_TARGET_GFX (the gfx id as a hex
+ * literal, e.g. @c 0x942 for gfx942); both are threaded through from CMake.
  *
  * @copyright Copyright (c) 2026
  *
@@ -24,23 +26,28 @@
 #include <cstddef>
 #include <type_traits>
 
-#include <cuda_runtime.h>
-
+#include <loops/backend/xpu.hxx>
 #include <loops/util/device.hxx>
 
 namespace loops {
 namespace launch_box {
 
 /**
- * @brief SM architecture flags.
+ * @brief Architecture flags (NVIDIA @c sm_* and AMD @c gfx*).
  *
  * Combine with @c | to bind one launch config to several architectures (e.g.
- * @c sm_80 @c | @c sm_86 ). @c fallback matches any architecture and belongs
- * last in a box. The bits above the NVIDIA range are reserved for AMD @c gfx
- * ISAs (gfx90a, gfx942, gfx950, RDNA) so they drop in as further flags.
+ * @c sm_80 @c | @c sm_86 , or @c gfx90a @c | @c gfx942 ). @c fallback matches
+ * any architecture and belongs last in a box. NVIDIA bits occupy the low
+ * range; AMD @c gfx bits start at 1u<<16 so both vendors coexist in one box.
+ *
+ * AMD families: CDNA (datacenter Instinct, wavefront 64) -- gfx906 MI50/60,
+ * gfx908 MI100, gfx90a MI210/MI250, gfx942 MI300/MI325, gfx950 MI350; RDNA
+ * (Radeon, native wave32) -- gfx1030 RDNA2, gfx1100 RDNA3, gfx1200/gfx1201
+ * RDNA4. A future-CDNA (e.g. MI400) slot drops in as the next high bit.
  */
 enum sm_flag_t : unsigned int {
   fallback = 1u << 0,
+  // NVIDIA SM (compute capability).
   sm_70 = 1u << 1,
   sm_72 = 1u << 2,
   sm_75 = 1u << 3,
@@ -49,6 +56,17 @@ enum sm_flag_t : unsigned int {
   sm_89 = 1u << 6,
   sm_90 = 1u << 7,
   sm_100 = 1u << 8,
+  // AMD CDNA (Instinct, wavefront 64).
+  gfx906 = 1u << 16,
+  gfx908 = 1u << 17,
+  gfx90a = 1u << 18,
+  gfx942 = 1u << 19,
+  gfx950 = 1u << 20,
+  // AMD RDNA (Radeon, native wave32).
+  gfx1030 = 1u << 21,
+  gfx1100 = 1u << 22,
+  gfx1200 = 1u << 23,
+  gfx1201 = 1u << 24,
 };
 
 constexpr sm_flag_t operator|(sm_flag_t a, sm_flag_t b) {
@@ -86,14 +104,49 @@ constexpr sm_flag_t flag_of(int compute_capability) {
   }
 }
 
-/// Architecture the kernels are compiled for. CMake pins it from a single-arch
-/// preset (release-a100 -> 80); multi-arch / native builds leave it at the
-/// Ampere floor and lean on each box's @c fallback entry.
+/// @c gfx flag for a gfx id given as a hex literal (0x942 -> @c gfx942 ). An
+/// unrecognized value carries no bit, so only a @c fallback entry can match it.
+constexpr sm_flag_t flag_of_gfx(int gfx) {
+  switch (gfx) {
+    case 0x906:
+      return gfx906;
+    case 0x908:
+      return gfx908;
+    case 0x90a:
+      return gfx90a;
+    case 0x942:
+      return gfx942;
+    case 0x950:
+      return gfx950;
+    case 0x1030:
+      return gfx1030;
+    case 0x1100:
+      return gfx1100;
+    case 0x1200:
+      return gfx1200;
+    case 0x1201:
+      return gfx1201;
+    default:
+      return static_cast<sm_flag_t>(0u);
+  }
+}
+
+/// Architecture the kernels are compiled for. A single-arch preset pins it
+/// exactly (release-a100 -> sm_80, release-mi300x -> gfx942); multi-arch /
+/// native builds leave it at the per-vendor floor and lean on each box's
+/// @c fallback entry. HIP builds key off @c LOOPS_TARGET_GFX , CUDA builds off
+/// @c LOOPS_TARGET_ARCH .
+#if defined(LOOPS_BACKEND_HIP)
+#ifndef LOOPS_TARGET_GFX
+#define LOOPS_TARGET_GFX 0x90a
+#endif
+constexpr sm_flag_t target_flag = flag_of_gfx(LOOPS_TARGET_GFX);
+#else
 #ifndef LOOPS_TARGET_ARCH
 #define LOOPS_TARGET_ARCH 80
 #endif
-
 constexpr sm_flag_t target_flag = flag_of(LOOPS_TARGET_ARCH);
+#endif
 
 /**
  * @brief Launch configuration for one or more SM architectures.
@@ -177,7 +230,7 @@ inline std::size_t occupancy_grid(const kernel_t& kernel,
                                   int block_size,
                                   std::size_t dynamic_shared_memory_bytes = 0) {
   int blocks_per_sm = 0;
-  cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+  xpu::occupancy_max_active_blocks_per_multiprocessor(
       &blocks_per_sm, kernel, block_size, dynamic_shared_memory_bytes);
   if (blocks_per_sm < 1)
     blocks_per_sm = 1;

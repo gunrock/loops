@@ -111,19 +111,19 @@ class preprocess_t {
   preprocess_t(tiles_iterator_t _tiles,
                tile_size_t _num_tiles,
                atom_size_t _num_atoms,
-               cudaStream_t stream = 0)
+               xpu::stream_t stream = 0)
       : preprocess_t(layout_t(_tiles, _num_tiles, _num_atoms), stream) {}
 
   /// Construct directly from a layout view (any layout type).
-  preprocess_t(layout_t _layout, cudaStream_t stream = 0)
+  preprocess_t(layout_t _layout, xpu::stream_t stream = 0)
       : total_work(_layout.num_tiles() + _layout.num_atoms()),
         num_merge_tiles(
             math::ceil_div(total_work, THREADS_PER_BLOCK * ITEMS_PER_THREAD)),
         d_tile_coordinates(nullptr) {
     int sm_count;
     int device_ordinal = device::get();
-    cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount,
-                           device_ordinal);
+    xpu::device_get_attribute(&sm_count, xpu::attr_multiprocessor_count,
+                              device_ordinal);
 
     constexpr std::size_t block_size = THREADS_PER_BLOCK;
     dim3 grid_size = math::ceil_div(num_merge_tiles + 1, block_size);

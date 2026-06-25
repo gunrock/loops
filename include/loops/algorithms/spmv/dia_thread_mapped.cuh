@@ -67,7 +67,7 @@ template <typename index_t, typename offset_t, typename type_t>
 util::timer_t dia_thread_mapped(dia_t<index_t, offset_t, type_t>& dia,
                                 vector_t<type_t>& x,
                                 vector_t<type_t>& y,
-                                cudaStream_t stream = 0) {
+                                xpu::stream_t stream = 0) {
   using tile_id_t = std::size_t;
   using atom_id_t = std::size_t;
   using dia_layout_t = layout::dia<tile_id_t, atom_id_t>;
@@ -91,7 +91,7 @@ util::timer_t dia_thread_mapped(dia_t<index_t, offset_t, type_t>& dia,
                           dia.num_diagonals, dia.diag_offsets.data().get(),
                           dia.values.data().get(), x.data().get(),
                           y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
   return timer;
 }

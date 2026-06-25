@@ -14,6 +14,7 @@
 #include <cstddef>
 
 #include <loops/container/layout.hxx>
+#include <loops/backend/xpu.hxx>
 
 namespace loops {
 namespace schedule {
@@ -65,6 +66,11 @@ class setup;
 }  // namespace loops
 
 #include <loops/schedule/thread_mapped.hxx>
+// group_mapped relies on NVIDIA cooperative-groups (experimental
+// block_tile_memory, exclusive_scan); no HIP equivalent yet, so it is
+// CUDA-only. HIP builds skip it (and the matching SpMV example).
+#if !defined(LOOPS_BACKEND_HIP)
 #include <loops/schedule/group_mapped.hxx>
+#endif
 #include <loops/schedule/work_oriented.hxx>
 #include <loops/schedule/merge_path_flat.hxx>

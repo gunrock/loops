@@ -2,7 +2,8 @@
 
 #include <exception>
 #include <string>
-#include <cuda_runtime_api.h>
+
+#include <loops/backend/xpu.hxx>
 
 namespace loops {
 
@@ -12,7 +13,7 @@ namespace loops {
  */
 namespace error {
 
-typedef cudaError_t error_t;
+typedef xpu::error_t error_t;
 
 /**
  * @brief Exception class for errors in device code.
@@ -22,7 +23,7 @@ struct exception_t : std::exception {
   std::string report;
 
   exception_t(error_t _status, std::string _message = "") {
-    report = cudaGetErrorString(_status) + std::string("\t: ") + _message;
+    report = xpu::get_error_string(_status) + std::string("\t: ") + _message;
   }
 
   exception_t(std::string _message = "") { report = _message; }
@@ -30,13 +31,13 @@ struct exception_t : std::exception {
 };
 
 /**
- * @brief Throw an exception if the given error code is not cudaSuccess.
+ * @brief Throw an exception if the given error code is not a success.
  *
- * @param status error_t error code (equivalent to cudaError_t).
+ * @param status error_t error code (xpu::success on no error).
  * @param message custom message to be appended to the error message.
  */
 inline void throw_if_exception(error_t status, std::string message = "") {
-  if (status != cudaSuccess)
+  if (status != xpu::success)
     throw exception_t(status, message);
 }
 

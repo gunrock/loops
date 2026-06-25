@@ -59,7 +59,7 @@ template <typename index_t, typename offset_t, typename type_t>
 util::timer_t csc_thread_mapped(csc_t<index_t, offset_t, type_t>& csc,
                                 vector_t<type_t>& x,
                                 vector_t<type_t>& y,
-                                cudaStream_t stream = 0) {
+                                xpu::stream_t stream = 0) {
   using tile_id_t = index_t;
   using atom_id_t = offset_t;
   using csc_layout_t = layout::csc<tile_id_t, atom_id_t>;
@@ -82,7 +82,7 @@ util::timer_t csc_thread_mapped(csc_t<index_t, offset_t, type_t>& csc,
                           grid_size, block_size, config,
                           csc.indices.data().get(), csc.values.data().get(),
                           x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
   return timer;
 }

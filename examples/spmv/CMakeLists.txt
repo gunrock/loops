@@ -1,7 +1,6 @@
 set(LOOPS_SPMV_SOURCES
   original.cu
   thread_mapped.cu
-  group_mapped.cu
   work_oriented.cu
   merge_path.cu
   ell_thread_mapped.cu
@@ -13,6 +12,13 @@ set(LOOPS_SPMV_SOURCES
   bcsr_thread_mapped.cu
   dia_thread_mapped.cu
 )
+
+# group_mapped leans on NVIDIA cooperative-groups (experimental
+# block_tile_memory + exclusive_scan), which HIP does not provide yet, so it is
+# a CUDA-only example.
+if(NOT LOOPS_BACKEND STREQUAL "HIP")
+  list(APPEND LOOPS_SPMV_SOURCES group_mapped.cu)
+endif()
 
 # Each SpMV example compiles for two precisions:
 #   - <name>.f32  (LOOPS_VALUE_T=float)

@@ -22,8 +22,6 @@
 #include <loops/memory.hxx>
 #include <iostream>
 
-#include <cub/block/block_scan.cuh>
-
 namespace loops {
 namespace algorithms {
 namespace spmv {
@@ -99,7 +97,7 @@ template <typename index_t, typename offset_t, typename type_t>
 util::timer_t merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
                               vector_t<type_t>& x,
                               vector_t<type_t>& y,
-                              cudaStream_t stream = 0) {
+                              xpu::stream_t stream = 0) {
   constexpr std::size_t block_size = launch_t<type_t>::block_size;
   constexpr std::size_t items_per_thread = launch_t<type_t>::items_per_thread;
 
@@ -117,7 +115,8 @@ util::timer_t merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
   int num_merge_tiles =
       math::ceil_div(csr.rows + csr.nnzs, block_size * items_per_thread);
   int device_ordinal = device::get();
-  cudaDeviceGetAttribute(&max_dim_x, cudaDevAttrMaxGridDimX, device_ordinal);
+  xpu::device_get_attribute(&max_dim_x, xpu::attr_max_grid_dim_x,
+                            device_ordinal);
 
   util::timer_t timer;
   timer.start();
@@ -133,7 +132,7 @@ util::timer_t merge_path_flat(csr_t<index_t, offset_t, type_t>& csr,
       grid_size, block_size, meta, csr.rows, csr.cols, csr.nnzs,
       csr.offsets.data().get(), csr.indices.data().get(),
       csr.values.data().get(), x.data().get(), y.data().get());
-  cudaStreamSynchronize(stream);
+  xpu::stream_synchronize(stream);
   timer.stop();
 
   return timer;

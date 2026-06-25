@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
                           thrust::raw_pointer_cast(storage.indices.data()),
                           thrust::raw_pointer_cast(storage.values.data()),
                           x.data().get(), y.data().get());
-  cudaStreamSynchronize(0);
+  xpu::stream_synchronize(0);
   timer.stop();
 
   std::cout << "custom_layout," << mtx.dataset << "," << csr.rows << ","
