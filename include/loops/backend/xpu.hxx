@@ -12,8 +12,8 @@
  *
  * Backend selection: CMake sets @c LOOPS_BACKEND_HIP (HIP) or
  * @c LOOPS_BACKEND_CUDA (CUDA, the default). Absent an explicit choice we infer
- * HIP when the AMD compiler defines @c __HIP_PLATFORM_AMD__ , otherwise CUDA, so
- * existing nvcc builds are unaffected.
+ * HIP when the AMD compiler defines @c __HIP_PLATFORM_AMD__ , otherwise CUDA,
+ * so existing nvcc builds are unaffected.
  *
  * @copyright Copyright (c) 2026
  *

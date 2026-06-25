@@ -138,8 +138,8 @@ inline error_t launch_cooperative_kernel(const func_t* kernel,
                                          void** args,
                                          std::size_t shared_memory_bytes,
                                          stream_t stream) {
-  return cudaLaunchCooperativeKernel<func_t>(
-      kernel, grid_dim, block_dim, args, shared_memory_bytes, stream);
+  return cudaLaunchCooperativeKernel<func_t>(kernel, grid_dim, block_dim, args,
+                                             shared_memory_bytes, stream);
 }
 
 }  // namespace xpu
